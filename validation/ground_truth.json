@@ -1,0 +1,282 @@
+[
+  {
+    "db_file": "chroma_01_knowledge_base.db",
+    "table_name": "knowledge_base",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "full_content is long-form text \u2014 canonical vector embedding use case."
+  },
+  {
+    "db_file": "chroma_02_product_reviews.db",
+    "table_name": "product_reviews",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "review_text is long user-generated content \u2014 semantic similarity search."
+  },
+  {
+    "db_file": "chroma_03_research_papers.db",
+    "table_name": "research_papers",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "abstract and body are scholarly long text \u2014 vector similarity retrieval."
+  },
+  {
+    "db_file": "chroma_04_job_postings.db",
+    "table_name": "job_postings",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "description is a long job posting text \u2014 candidates search semantically."
+  },
+  {
+    "db_file": "chroma_05_support_articles.db",
+    "table_name": "support_articles",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "content is helpdesk article body text \u2014 keyword/semantic FAQ search."
+  },
+  {
+    "db_file": "chroma_06_blog_posts.db",
+    "table_name": "blog_posts",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "body is full blog post content \u2014 semantic search and recommendation."
+  },
+  {
+    "db_file": "chroma_07_legal_contracts.db",
+    "table_name": "legal_contracts",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "contract_text is dense legal prose \u2014 semantic clause retrieval."
+  },
+  {
+    "db_file": "chroma_08_medical_notes.db",
+    "table_name": "medical_notes",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "clinical_note is long unstructured clinical text \u2014 semantic retrieval for diagnosis support."
+  },
+  {
+    "db_file": "chroma_09_course_descriptions.db",
+    "table_name": "courses",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "syllabus and description are long educational text \u2014 semantic course search."
+  },
+  {
+    "db_file": "chroma_10_news_articles.db",
+    "table_name": "news_articles",
+    "expected_db": "chroma",
+    "confidence": "high",
+    "rationale": "content is full news article body \u2014 topic similarity and search."
+  },
+  {
+    "db_file": "mongo_01_departments.db",
+    "table_name": "departments",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Self-contained entity, no FKs, short text fields \u2014 document store."
+  },
+  {
+    "db_file": "mongo_02_user_profiles.db",
+    "table_name": "user_profiles",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Flat user entity with mixed field types and no FKs \u2014 document store."
+  },
+  {
+    "db_file": "mongo_03_product_catalog.db",
+    "table_name": "products",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Product entity with mixed text/numeric attributes and no FKs \u2014 document store."
+  },
+  {
+    "db_file": "mongo_04_company_locations.db",
+    "table_name": "offices",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Reference/config entity with no FKs and mixed short fields \u2014 document store."
+  },
+  {
+    "db_file": "mongo_05_config_settings.db",
+    "table_name": "app_config",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Key-value config entity, no FKs, no relational structure \u2014 document store."
+  },
+  {
+    "db_file": "mongo_06_inventory_items.db",
+    "table_name": "inventory",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Self-contained inventory item entity with no FK references \u2014 document store."
+  },
+  {
+    "db_file": "mongo_07_country_metadata.db",
+    "table_name": "countries",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Pure lookup/reference table with no FKs \u2014 document store."
+  },
+  {
+    "db_file": "mongo_08_event_catalog.db",
+    "table_name": "events",
+    "expected_db": "mongo",
+    "confidence": "high",
+    "rationale": "Event entity with short descriptive fields and no FKs \u2014 document store."
+  },
+  {
+    "db_file": "mongo_09_vehicle_fleet.db",
+    "table_name": "vehicles",
+    "expected_db": "mongo",
+    "confidence": "medium",
+    "rationale": "Self-contained entity with no FKs and varied attributes \u2014 document store. Medium because fleet management often uses relational."
+  },
+  {
+    "db_file": "mongo_10_currency_rates.db",
+    "table_name": "currency_rates",
+    "expected_db": "mongo",
+    "confidence": "medium",
+    "rationale": "Reference document entity with no FKs. Medium because rates could also go relational for time-series querying."
+  },
+  {
+    "db_file": "neo4j_01_employee_projects.db",
+    "table_name": "employee_projects",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Pure junction table with 2 FKs \u2014 canonical graph edge."
+  },
+  {
+    "db_file": "neo4j_02_user_follows.db",
+    "table_name": "user_follows",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Social graph follower/followee relationship \u2014 pure graph edge."
+  },
+  {
+    "db_file": "neo4j_03_product_categories.db",
+    "table_name": "product_categories",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Product-to-category many-to-many mapping \u2014 graph relationship."
+  },
+  {
+    "db_file": "neo4j_04_role_permissions.db",
+    "table_name": "role_permissions",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "RBAC junction table \u2014 role-to-permission graph is a natural fit."
+  },
+  {
+    "db_file": "neo4j_05_supplier_products.db",
+    "table_name": "supplier_products",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Many-to-many supplier-to-product supply chain mapping \u2014 graph."
+  },
+  {
+    "db_file": "neo4j_06_course_prerequisites.db",
+    "table_name": "course_prerequisites",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "DAG of course dependencies \u2014 acyclic directed graph, natural for Neo4j."
+  },
+  {
+    "db_file": "neo4j_07_patient_doctors.db",
+    "table_name": "patient_doctors",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Patient-to-doctor assignment \u2014 bipartite graph relationship."
+  },
+  {
+    "db_file": "neo4j_08_org_hierarchy.db",
+    "table_name": "org_hierarchy",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Self-referencing FK (manager->employee) \u2014 tree/hierarchy graph."
+  },
+  {
+    "db_file": "neo4j_09_friend_network.db",
+    "table_name": "friendships",
+    "expected_db": "neo4j",
+    "confidence": "high",
+    "rationale": "Symmetric social friendship graph \u2014 pure graph edge table."
+  },
+  {
+    "db_file": "neo4j_10_tag_assignments.db",
+    "table_name": "tag_assignments",
+    "expected_db": "neo4j",
+    "confidence": "medium",
+    "rationale": "Tag-to-resource junction. Medium \u2014 could also stay relational if tag filtering via SQL is primary use case."
+  },
+  {
+    "db_file": "relational_01_support_tickets.db",
+    "table_name": "support_tickets",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Transactional record with status/priority enum-like fields \u2014 SQL filtering."
+  },
+  {
+    "db_file": "relational_02_sales_transactions.db",
+    "table_name": "sales_transactions",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Financial transaction table \u2014 numeric aggregation, exact-match, audit trail."
+  },
+  {
+    "db_file": "relational_03_employee_payroll.db",
+    "table_name": "payroll",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Payroll record with numeric salary/deduction fields \u2014 exact aggregation."
+  },
+  {
+    "db_file": "relational_04_server_logs.db",
+    "table_name": "server_logs",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Structured audit/operational log with status codes and timestamps \u2014 SQL aggregation."
+  },
+  {
+    "db_file": "relational_05_inventory_movements.db",
+    "table_name": "inventory_movements",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Stock movement ledger \u2014 insert-only append log, numeric quantities, SQL SUM."
+  },
+  {
+    "db_file": "relational_06_subscription_plans.db",
+    "table_name": "subscription_plans",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Pricing/plan lookup table \u2014 numeric-heavy, exact-match for billing engine."
+  },
+  {
+    "db_file": "relational_07_leave_requests.db",
+    "table_name": "leave_requests",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "HR operational table \u2014 date ranges, status workflow, numeric days \u2014 SQL reporting."
+  },
+  {
+    "db_file": "relational_08_order_items.db",
+    "table_name": "order_items",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Line-item transactional table \u2014 numeric price/qty, JOIN to orders \u2014 pure relational."
+  },
+  {
+    "db_file": "relational_09_attendance.db",
+    "table_name": "attendance",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "Daily attendance timestamps \u2014 temporal/numeric, exact-match, GROUP BY reporting."
+  },
+  {
+    "db_file": "relational_10_audit_log.db",
+    "table_name": "audit_log",
+    "expected_db": "relational",
+    "confidence": "high",
+    "rationale": "System audit trail \u2014 append-only, timestamp-ordered, compliance queries \u2014 relational."
+  }
+]

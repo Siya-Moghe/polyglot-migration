@@ -1,0 +1,472 @@
+{
+  "metrics": {
+    "total": 40,
+    "correct": 31,
+    "accuracy": 0.775,
+    "fallback_rate": 0.1,
+    "fallbacks": 4,
+    "macro_f1": 0.772,
+    "per_class": {
+      "chroma": {
+        "precision": 0.588,
+        "recall": 1.0,
+        "f1": 0.741,
+        "tp": 10,
+        "fp": 7,
+        "fn": 0
+      },
+      "mongo": {
+        "precision": 1.0,
+        "recall": 0.7,
+        "f1": 0.824,
+        "tp": 7,
+        "fp": 0,
+        "fn": 3
+      },
+      "neo4j": {
+        "precision": 0.9,
+        "recall": 0.9,
+        "f1": 0.9,
+        "tp": 9,
+        "fp": 1,
+        "fn": 1
+      },
+      "relational": {
+        "precision": 0.833,
+        "recall": 0.5,
+        "f1": 0.625,
+        "tp": 5,
+        "fp": 1,
+        "fn": 5
+      }
+    }
+  },
+  "confusion_matrix": {
+    "chroma": {
+      "chroma": 10,
+      "mongo": 0,
+      "neo4j": 0,
+      "relational": 0
+    },
+    "mongo": {
+      "chroma": 2,
+      "mongo": 7,
+      "neo4j": 0,
+      "relational": 1
+    },
+    "neo4j": {
+      "chroma": 1,
+      "mongo": 0,
+      "neo4j": 9,
+      "relational": 0
+    },
+    "relational": {
+      "chroma": 4,
+      "mongo": 0,
+      "neo4j": 1,
+      "relational": 5
+    }
+  },
+  "results": [
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 11.0,
+      "table_name": "knowledge_base",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "full_content is long-form text \u2014 canonical vector embedding use case."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 14.0,
+      "table_name": "product_reviews",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "review_text is long user-generated content \u2014 semantic similarity search."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "FALLBACK TRIGGERED: Chroma fallback used because the AI agent failed.",
+      "fallback_used": true,
+      "elapsed_s": 27.7,
+      "table_name": "research_papers",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "abstract and body are scholarly long text \u2014 vector similarity retrieval."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 13.0,
+      "table_name": "job_postings",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "description is a long job posting text \u2014 candidates search semantically."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.2,
+      "table_name": "support_articles",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "content is helpdesk article body text \u2014 keyword/semantic FAQ search."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.7,
+      "table_name": "blog_posts",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "body is full blog post content \u2014 semantic search and recommendation."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.3,
+      "table_name": "legal_contracts",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "contract_text is dense legal prose \u2014 semantic clause retrieval."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 18.9,
+      "table_name": "medical_notes",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "clinical_note is long unstructured clinical text \u2014 semantic retrieval for diagnosis support."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.9,
+      "table_name": "courses",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "syllabus and description are long educational text \u2014 semantic course search."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Heuristic routing selected chroma based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.0,
+      "table_name": "news_articles",
+      "expected_db": "chroma",
+      "confidence": "high",
+      "rationale": "content is full news article body \u2014 topic similarity and search."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "The departments table is suited for Chroma due to its long semantic text columns, suggesting a search-oriented content strategy.",
+      "fallback_used": false,
+      "elapsed_s": 9.8,
+      "table_name": "departments",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Self-contained entity, no FKs, short text fields \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "Heuristic routing selected mongo based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.6,
+      "table_name": "user_profiles",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Flat user entity with mixed field types and no FKs \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "Heuristic routing selected mongo based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 13.2,
+      "table_name": "products",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Product entity with mixed text/numeric attributes and no FKs \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "Heuristic routing selected mongo based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.5,
+      "table_name": "offices",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Reference/config entity with no FKs and mixed short fields \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "Heuristic routing selected mongo based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 12.4,
+      "table_name": "app_config",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Key-value config entity, no FKs, no relational structure \u2014 document store."
+    },
+    {
+      "predicted_db": "relational",
+      "routing_reason": "Heuristic routing selected relational based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.6,
+      "table_name": "inventory",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Self-contained inventory item entity with no FK references \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "FALLBACK TRIGGERED: Mongo fallback used because the AI agent failed.",
+      "fallback_used": true,
+      "elapsed_s": 28.3,
+      "table_name": "countries",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Pure lookup/reference table with no FKs \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "Heuristic routing selected mongo based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.9,
+      "table_name": "events",
+      "expected_db": "mongo",
+      "confidence": "high",
+      "rationale": "Event entity with short descriptive fields and no FKs \u2014 document store."
+    },
+    {
+      "predicted_db": "mongo",
+      "routing_reason": "Heuristic routing selected mongo based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.1,
+      "table_name": "vehicles",
+      "expected_db": "mongo",
+      "confidence": "medium",
+      "rationale": "Self-contained entity with no FKs and varied attributes \u2014 document store. Medium because fleet management often uses relational."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "The currency_rates table is ambiguous, suggesting it may suit semantic search (Chroma), with four text columns and no foreign keys.",
+      "fallback_used": false,
+      "elapsed_s": 10.5,
+      "table_name": "currency_rates",
+      "expected_db": "mongo",
+      "confidence": "medium",
+      "rationale": "Reference document entity with no FKs. Medium because rates could also go relational for time-series querying."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.2,
+      "table_name": "employee_projects",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Pure junction table with 2 FKs \u2014 canonical graph edge."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.6,
+      "table_name": "user_follows",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Social graph follower/followee relationship \u2014 pure graph edge."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.9,
+      "table_name": "product_categories",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Product-to-category many-to-many mapping \u2014 graph relationship."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 8.9,
+      "table_name": "role_permissions",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "RBAC junction table \u2014 role-to-permission graph is a natural fit."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.8,
+      "table_name": "supplier_products",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Many-to-many supplier-to-product supply chain mapping \u2014 graph."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.9,
+      "table_name": "course_prerequisites",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "DAG of course dependencies \u2014 acyclic directed graph, natural for Neo4j."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 7.1,
+      "table_name": "patient_doctors",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Patient-to-doctor assignment \u2014 bipartite graph relationship."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "The org_hierarchy table is ambiguous due to its relationship-heavy nature with manager_id, making it a good fit for Neo4j's graph database model.",
+      "fallback_used": false,
+      "elapsed_s": 11.9,
+      "table_name": "org_hierarchy",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Self-referencing FK (manager->employee) \u2014 tree/hierarchy graph."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 8.3,
+      "table_name": "friendships",
+      "expected_db": "neo4j",
+      "confidence": "high",
+      "rationale": "Symmetric social friendship graph \u2014 pure graph edge table."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "FALLBACK TRIGGERED: Chroma fallback used because the AI agent failed.",
+      "fallback_used": true,
+      "elapsed_s": 32.0,
+      "table_name": "tag_assignments",
+      "expected_db": "neo4j",
+      "confidence": "medium",
+      "rationale": "Tag-to-resource junction. Medium \u2014 could also stay relational if tag filtering via SQL is primary use case."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Given its semantic search capabilities, Chroma is preferred for long text columns in the support_tickets table.",
+      "fallback_used": false,
+      "elapsed_s": 10.5,
+      "table_name": "support_tickets",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Transactional record with status/priority enum-like fields \u2014 SQL filtering."
+    },
+    {
+      "predicted_db": "relational",
+      "routing_reason": "Heuristic routing selected relational based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.7,
+      "table_name": "sales_transactions",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Financial transaction table \u2014 numeric aggregation, exact-match, audit trail."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Given the presence of long semantic text and search-oriented content in the 'period' and 'paid_at' columns, Chroma is preferred for its support of full-text querying and indexing.",
+      "fallback_used": false,
+      "elapsed_s": 12.8,
+      "table_name": "payroll",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Payroll record with numeric salary/deduction fields \u2014 exact aggregation."
+    },
+    {
+      "predicted_db": "relational",
+      "routing_reason": "Heuristic routing selected relational based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.8,
+      "table_name": "server_logs",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Structured audit/operational log with status codes and timestamps \u2014 SQL aggregation."
+    },
+    {
+      "predicted_db": "relational",
+      "routing_reason": "Heuristic routing selected relational based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 6.9,
+      "table_name": "inventory_movements",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Stock movement ledger \u2014 insert-only append log, numeric quantities, SQL SUM."
+    },
+    {
+      "predicted_db": "relational",
+      "routing_reason": "Heuristic routing selected relational based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 27.2,
+      "table_name": "subscription_plans",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Pricing/plan lookup table \u2014 numeric-heavy, exact-match for billing engine."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "Prefer chroma for long semantic text / search-oriented content.",
+      "fallback_used": false,
+      "elapsed_s": 12.2,
+      "table_name": "leave_requests",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "HR operational table \u2014 date ranges, status workflow, numeric days \u2014 SQL reporting."
+    },
+    {
+      "predicted_db": "neo4j",
+      "routing_reason": "Heuristic routing selected neo4j based on schema features.",
+      "fallback_used": false,
+      "elapsed_s": 28.9,
+      "table_name": "order_items",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Line-item transactional table \u2014 numeric price/qty, JOIN to orders \u2014 pure relational."
+    },
+    {
+      "predicted_db": "relational",
+      "routing_reason": "FALLBACK TRIGGERED: Relational fallback used because the AI agent failed.",
+      "fallback_used": true,
+      "elapsed_s": 29.2,
+      "table_name": "attendance",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "Daily attendance timestamps \u2014 temporal/numeric, exact-match, GROUP BY reporting."
+    },
+    {
+      "predicted_db": "chroma",
+      "routing_reason": "The audit_log table has long semantic text columns and no foreign keys, making it a good fit for Chroma's search-oriented capabilities.",
+      "fallback_used": false,
+      "elapsed_s": 10.8,
+      "table_name": "audit_log",
+      "expected_db": "relational",
+      "confidence": "high",
+      "rationale": "System audit trail \u2014 append-only, timestamp-ordered, compliance queries \u2014 relational."
+    }
+  ]
+}

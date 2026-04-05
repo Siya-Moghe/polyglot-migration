@@ -1,0 +1,121 @@
+# -----------------------------
+# Python cache / compiled files
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# -----------------------------
+# Virtual environments
+# -----------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -----------------------------
+# IDE / editor files
+# -----------------------------
+.vscode/
+.idea/
+*.iml
+
+# -----------------------------
+# OS files
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Environment / secrets
+# -----------------------------
+.env
+.env.*
+*.env
+
+# -----------------------------
+# Logs / temp files
+# -----------------------------
+*.log
+*.tmp
+*.bak
+*.swp
+
+# -----------------------------
+# Python build / packaging
+# -----------------------------
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# -----------------------------
+# Testing / coverage
+# -----------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# -----------------------------
+# Jupyter
+# -----------------------------
+.ipynb_checkpoints/
+
+# -----------------------------
+# SQLite / local databases
+# -----------------------------
+*.db
+*.sqlite
+*.sqlite3
+
+# -----------------------------
+# Generated datasets / eval artifacts
+# -----------------------------
+generated_dbs/
+synthetic_dbs/
+validation/results/
+validation/output/
+evaluation_results/
+reports/
+
+# -----------------------------
+# Vector / local model storage
+# -----------------------------
+chroma/
+chroma_db/
+vector_store/
+faiss_index/
+indexes/
+
+# -----------------------------
+# Mongo / Neo4j local exports
+# -----------------------------
+mongo_exports/
+neo4j_exports/
+graph_exports/
+
+# -----------------------------
+# Model artifacts / adapters
+# -----------------------------
+models/
+checkpoints/
+lora/
+adapters/
+*.bin
+*.pt
+*.pth
+*.safetensors
+
+# -----------------------------
+# Misc generated JSON / CSV outputs
+# -----------------------------
+*.csv
+*.tsv
+*.parquet
+*.jsonl
+
+# Keep important config JSONs tracked if needed
+#!config/*.json
