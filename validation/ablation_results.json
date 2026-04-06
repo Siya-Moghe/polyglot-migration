@@ -1,0 +1,152 @@
+{
+  "V1": {
+    "total": 40,
+    "correct": 29,
+    "accuracy": 0.725,
+    "macro_f1": 0.722,
+    "fallback_rate": 0.15,
+    "avg_time_s": 13.0,
+    "per_class": {
+      "chroma": {
+        "precision": 0.556,
+        "recall": 1.0,
+        "f1": 0.714
+      },
+      "mongo": {
+        "precision": 0.857,
+        "recall": 0.6,
+        "f1": 0.706
+      },
+      "neo4j": {
+        "precision": 0.889,
+        "recall": 0.8,
+        "f1": 0.842
+      },
+      "relational": {
+        "precision": 0.833,
+        "recall": 0.5,
+        "f1": 0.625
+      }
+    }
+  },
+  "V2": {
+    "total": 40,
+    "correct": 30,
+    "accuracy": 0.75,
+    "macro_f1": 0.744,
+    "fallback_rate": 0.1,
+    "avg_time_s": 9.4,
+    "per_class": {
+      "chroma": {
+        "precision": 0.625,
+        "recall": 1.0,
+        "f1": 0.769
+      },
+      "mongo": {
+        "precision": 0.875,
+        "recall": 0.7,
+        "f1": 0.778
+      },
+      "neo4j": {
+        "precision": 0.889,
+        "recall": 0.8,
+        "f1": 0.842
+      },
+      "relational": {
+        "precision": 0.714,
+        "recall": 0.5,
+        "f1": 0.588
+      }
+    }
+  },
+  "V3": {
+    "total": 40,
+    "correct": 29,
+    "accuracy": 0.725,
+    "macro_f1": 0.724,
+    "fallback_rate": 0.1,
+    "avg_time_s": 12.1,
+    "per_class": {
+      "chroma": {
+        "precision": 0.556,
+        "recall": 1.0,
+        "f1": 0.714
+      },
+      "mongo": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75
+      },
+      "neo4j": {
+        "precision": 0.889,
+        "recall": 0.8,
+        "f1": 0.842
+      },
+      "relational": {
+        "precision": 0.714,
+        "recall": 0.5,
+        "f1": 0.588
+      }
+    }
+  },
+  "V4": {
+    "total": 40,
+    "correct": 29,
+    "accuracy": 0.725,
+    "macro_f1": 0.72,
+    "fallback_rate": 0.1,
+    "avg_time_s": 12.4,
+    "per_class": {
+      "chroma": {
+        "precision": 0.588,
+        "recall": 1.0,
+        "f1": 0.741
+      },
+      "mongo": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75
+      },
+      "neo4j": {
+        "precision": 0.8,
+        "recall": 0.8,
+        "f1": 0.8
+      },
+      "relational": {
+        "precision": 0.714,
+        "recall": 0.5,
+        "f1": 0.588
+      }
+    }
+  },
+  "V5": {
+    "total": 40,
+    "correct": 30,
+    "accuracy": 0.75,
+    "macro_f1": 0.743,
+    "fallback_rate": 0.0,
+    "avg_time_s": 10.3,
+    "per_class": {
+      "chroma": {
+        "precision": 0.588,
+        "recall": 1.0,
+        "f1": 0.741
+      },
+      "mongo": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75
+      },
+      "neo4j": {
+        "precision": 0.818,
+        "recall": 0.9,
+        "f1": 0.857
+      },
+      "relational": {
+        "precision": 0.833,
+        "recall": 0.5,
+        "f1": 0.625
+      }
+    }
+  }
+}
