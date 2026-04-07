@@ -200,6 +200,15 @@ Return ONLY JSON:
   "target_db": "chroma or mongo or neo4j or relational",
   "reasoning": "One clear sentence explaining the best fit."
 }}
+HUMAN CONTEXT / PREFERENCE: 
+"{state.get('human_context', 'None provided')}"
+
+MANDATE:
+Your primary goal is ARCHITECTURAL CORRECTNESS based on the schema features. 
+While you should acknowledge human context in your reasoning, you MUST NOT 
+allow it to override the technically superior target database. 
+If the human preference is sub-optimal, explain why you are rejecting it.
+
 """
 
     print(f"  [orchestrator] LLM arbitration for '{table_name}'...")
@@ -372,14 +381,14 @@ def _build_graph() -> Any:
 _GRAPH = _build_graph()
 
 
-def plan_embeddings(schema: dict[str, Any], sample_rows_map: dict[str, list] = None) -> dict[str, dict]:
+def plan_embeddings(schema: dict[str, Any], sample_rows_map: dict[str, list] = None, human_context: str = "") -> dict[str, dict]:
     """
     Run the LangGraph pipeline for each table.
 
     Args:
         schema:          Output of introspect_schema().
-        sample_rows_map: Optional dict of {table_name: [row_dicts]} for enriched prompts.
-                         Pass the first 2-3 rows per table. If None, enrichment is skipped.
+        sample_rows_map: Optional dict of {table_name: [row_dicts]}
+        human_context:   New parameter for bias testing/expert advice.
     """
     strategies = {}
     sample_rows_map = sample_rows_map or {}
@@ -387,6 +396,7 @@ def plan_embeddings(schema: dict[str, Any], sample_rows_map: dict[str, list] = N
     for table_name, table_info in schema.items():
         print(f"\nPlanning: {table_name}")
 
+        # Add human_context to the initial state
         init_state: StrategyState = {
             "table_name": table_name,
             "table_info": table_info,
@@ -398,8 +408,10 @@ def plan_embeddings(schema: dict[str, Any], sample_rows_map: dict[str, list] = N
             "retries": 0,
             "final": None,
             "sample_rows": sample_rows_map.get(table_name, []),
+            "human_context": human_context, # <--- NEW FIELD
         }
 
+        # Invoke the graph with the new state
         strategies[table_name] = _GRAPH.invoke(init_state)["final"]
 
     return strategies

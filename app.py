@@ -1,112 +1,125 @@
 import streamlit as st
-import time
-from core.introspect import introspect_schema, fetch_rows
+import pandas as pd
+from core.introspect import introspect_schema
 from core.orchestrator import plan_embeddings
 from core.embedder import embed_and_store
 
-st.set_page_config(page_title="Polyglot AI Migrator", layout="wide")
+st.set_page_config(page_title="Polyglot Migration Lab", layout="wide")
 
-st.title("Polyglot AI Database Migrator")
-st.markdown("Analyze legacy SQL schemas and let AI automatically route tables to **Mongo, Neo4j, Chroma, or Relational MySQL**.")
+if "schema" not in st.session_state: st.session_state.schema = None
+if "strategies" not in st.session_state: st.session_state.strategies = {}
+if "neutral_strategies" not in st.session_state: st.session_state.neutral_strategies = {}
 
-# --- SESSION STATE ---
-if "schema" not in st.session_state:
-    st.session_state.schema = None
-if "strategies" not in st.session_state:
-    st.session_state.strategies = None
+st.title("Polyglot Migration: Bias & Execution Lab")
 
-# --- SIDEBAR: CONNECTION ---
 with st.sidebar:
-    st.header("1. Connect to Source DB")
-    db_url = st.text_input("SQL Connection String", value="sqlite:///enterprise_system.db")
-    
-    if st.button("Introspect Schema", type="primary"):
-        with st.spinner("Analyzing schema..."):
-            st.session_state.schema = introspect_schema(db_url)
-            st.session_state.strategies = None # Reset strategies if pulling new DB
-        st.success(f"Found {len(st.session_state.schema)} tables!")
-
-# --- MAIN BODY: AI ROUTING ---
-if st.session_state.schema:
-    st.header("2. AI Strategy Generation")
-    
-    if st.session_state.strategies is None:
-        if st.button("Generate Migration Plan (Wake up AI Agents)"):
-            with st.spinner("Running LangGraph Orchestrator & Specialist Agents..."):
-                # Fetch sample rows for prompt enrichment
-                sample_rows_map = {t: fetch_rows(db_url, t, limit=2) for t in st.session_state.schema}
-                
-                # Run the pipeline
-                st.session_state.strategies = plan_embeddings(
-                    st.session_state.schema, 
-                    sample_rows_map=sample_rows_map
-                )
-            st.rerun()
-
-# --- HUMAN IN THE LOOP: OVERRIDE DASHBOARD ---
-if st.session_state.strategies:
-    st.header("3. Human-in-the-Loop Review")
-    st.markdown("Review the AI's decisions below. You can override the target database before executing the chunked migration.")
-    
-    # Create a visual grid for the tables
-    for table_name, strat in st.session_state.strategies.items():
-        current_target = strat.get('target_db', 'unknown').upper()
-        
-        # Color coding the expander based on target DB
-        emoji = "Mongo" if current_target == "MONGO" else "Neo" if current_target == "NEO4J" else "Chroma" if current_target == "CHROMA" else "other"
-        
-        with st.expander(f"{emoji} {table_name.upper()}  →  Routed to: {current_target}"):
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown(f"**AI Reasoning:** {strat.get('routing_reason', strat.get('reasoning', 'N/A'))}")
-                
-                # Show the JSON template preview
-                if current_target == 'CHROMA':
-                    st.info(f"**Embedding Template:**\n{strat.get('template', 'N/A')}")
-                elif current_target == 'MONGO':
-                    st.info(f"**Nested Document Layout:**\nFields: {strat.get('fields', [])}\nNested: {strat.get('nested_fields', {})}")
-                elif current_target == 'NEO4J':
-                    st.info(f"**Graph Topology:**\n{strat.get('template', 'N/A')}")
-                elif current_target == 'RELATIONAL':
-                    st.info(f"**Preserved SQL Table:**\nPrimary Use: {strat.get('primary_use', 'transactional')}\nColumns Kept: {strat.get('used_columns', [])}")
-            
-            with col2:
-                # HUMAN OVERRIDE DROPDOWN
-                options = ["chroma", "mongo", "neo4j", "relational"]
-                current_target_lower = current_target.lower()
-                
-                new_target = st.selectbox(
-                    f"Override Target for `{table_name}`", 
-                    options=options, 
-                    index=options.index(current_target_lower) if current_target_lower in options else 0,
-                    key=f"override_{table_name}"
-                )
-                
-                if new_target != current_target_lower:
-                    st.session_state.strategies[table_name]["target_db"] = new_target
-                    st.warning(f" Overridden to {new_target.upper()}. (Note: Schema structure will adapt during export fallback).")
+    st.header("1. Source Connection")
+    db_url = st.text_input("SQLite URL", value="sqlite:///enterprise_system.db")
+    if st.button("Introspect Schema"):
+        st.session_state.schema = introspect_schema(db_url)
+        st.success("Database Loaded")
 
     st.divider()
+    st.header("2. Bias Stress Testing")
+    human_context = st.text_area("Expert Advice / Context", placeholder="e.g. 'Use SQL at all costs'")
     
-    # --- EXECUTION BUTTON ---
-    st.header("4. Execution")
-    st.markdown("This will stream data in batches of 5,000 rows and automatically redact PII (Emails, SSNs, etc.).")
-    
-    if st.button("Execute Enterprise Migration", type="primary"):
-        my_bar = st.progress(0, text="Initializing batch streaming...")
+    if st.button("Generate Migration Plan"):
+        if not st.session_state.schema:
+            st.error("Introspect a database first")
+        else:
+            with st.spinner("Calculating Pure vs. Biased strategies..."):
+                st.session_state.neutral_strategies = plan_embeddings(st.session_state.schema, human_context="")
+                st.session_state.strategies = plan_embeddings(st.session_state.schema, human_context=human_context)
+                st.success("Planning Complete")
+
+if st.session_state.strategies:
+    tabs = st.tabs(["Migration Plan & Execution", "Bias Analysis"])
+
+    with tabs[0]:
+        st.subheader("Final Recommendations & Manual Override")
         
-        total_tables = len(st.session_state.strategies)
-        for idx, (tname, strat) in enumerate(st.session_state.strategies.items()):
-            
-            my_bar.progress(idx / total_tables, text=f"Migrating `{tname}` to {strat['target_db'].upper()}...")
-            
-            try:
-                # Calls your newly upgraded embedder with chunking & masking!
-                records_moved = embed_and_store(tname, strat, st.session_state.schema, db_url)
-                st.success(f"Successfully streamed **{records_moved}** records from `{tname}` into {strat['target_db'].upper()}")
-            except Exception as e:
-                st.error(f"Failed to migrate `{tname}`: {e}")
+        for table, strat in st.session_state.strategies.items():
+            with st.expander(f"Table: {table} -> {strat.get('target_db', '').upper()}", expanded=False):
+                c1, c2 = st.columns([1, 2])
                 
-        my_bar.progress(1.0, text="Migration Complete!")
-        st.balloons()
+                with c1:
+                    current_target = strat.get('target_db', 'relational').lower()
+                    options = ["chroma", "mongo", "neo4j", "relational"]
+                    
+                    safe_index = options.index(current_target) if current_target in options else 0
+                    
+                    new_target = st.selectbox(
+                        "Target DB", 
+                        options, 
+                        index=safe_index,
+                        key=f"sync_{table}"
+                    )
+                    st.session_state.strategies[table]['target_db'] = new_target
+                    st.write(f"**Retries:** {strat.get('retries', 0)}")
+
+                with c2:
+                    st.write(f"**AI Logic:** {strat.get('reasoning', 'N/A')}")
+                    
+                    if new_target == "mongo":
+                        st.write("**Document Structure:**")
+                        st.json({
+                            "top_level_fields": strat.get("fields", []),
+                            "nested_objects": strat.get("nested_fields", {})
+                        })
+                    else:
+                        st.write("**Columns to Migrate:**")
+                        display_fields = strat.get("used_columns", [])
+                        st.code(display_fields if display_fields else "All columns")
+
+        st.divider()
+        st.subheader("Stage 3: Data Migration")
+        
+        if st.button("Execute Final Migration", type="primary"):
+            with st.status("Migrating Data...", expanded=True) as status:
+                for table, strat in st.session_state.strategies.items():
+                    target = strat.get('target_db', 'UNKNOWN').upper()
+                    st.write(f"Exporting `{table}` to **{target}**...")
+                    
+                    try:
+                        records_inserted = embed_and_store(
+                            table_name=table,
+                            strategy=strat,
+                            schema=st.session_state.schema,
+                            db_url=db_url
+                        )
+                        st.write(f"Successfully migrated `{table}` ({records_inserted} records)")
+                    except Exception as e:
+                        st.error(f"Failed to migrate `{table}`: {e}")
+                        
+                status.update(label="Migration Complete", state="complete", expanded=False)
+
+    with tabs[1]:
+        st.subheader("Architectural Objectivity Report")
+        neutral = st.session_state.neutral_strategies
+        biased = st.session_state.strategies
+        
+        matches = 0
+        total = len(neutral)
+        flips = []
+
+        for t in neutral:
+            n_target = neutral[t].get('target_db')
+            b_target = biased[t].get('target_db')
+            if n_target == b_target:
+                matches += 1
+            else:
+                flips.append({"table": t, "Neutral Decision": n_target, "Biased Decision": b_target})
+
+        integrity_score = (matches / total) * 100 if total > 0 else 100
+        
+        st.metric("Architectural Integrity Score", f"{integrity_score:.1f}%", 
+                  delta=f"{matches-total} AI Flips", delta_color="inverse")
+        
+        if flips:
+            st.warning(f"The AI changed its mind on {len(flips)} tables because of your input.")
+            st.table(pd.DataFrame(flips))
+        else:
+            st.success("The Model stayed 100% objective despite human context")
+
+else:
+    st.info("Introspect a DB and click 'Generate Migration Plan' to begin.")
