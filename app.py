@@ -1,14 +1,18 @@
 import streamlit as st
 import pandas as pd
+import copy # NEEDED to separate your overrides from the AI's original answers
 from core.introspect import introspect_schema
 from core.orchestrator import plan_embeddings
 from core.embedder import embed_and_store
 
 st.set_page_config(page_title="Polyglot Migration Lab", layout="wide")
 
+# --- STATE INITIALIZATION ---
 if "schema" not in st.session_state: st.session_state.schema = None
 if "strategies" not in st.session_state: st.session_state.strategies = {}
 if "neutral_strategies" not in st.session_state: st.session_state.neutral_strategies = {}
+if "ai_biased_strategies" not in st.session_state: st.session_state.ai_biased_strategies = {} # NEW SNAPSHOT STATE
+if "bias_tested" not in st.session_state: st.session_state.bias_tested = False
 
 st.title("Polyglot Migration: Bias & Execution Lab")
 
@@ -27,10 +31,24 @@ with st.sidebar:
         if not st.session_state.schema:
             st.error("Introspect a database first")
         else:
-            with st.spinner("Calculating Pure vs. Biased strategies..."):
+            context_provided = bool(human_context.strip())
+            st.session_state.bias_tested = context_provided
+            
+            with st.spinner("Calculating strategies..." if not context_provided else "Running Pure vs. Biased strategies..."):
+                # 1. Base/neutral plan
                 st.session_state.neutral_strategies = plan_embeddings(st.session_state.schema, human_context="")
-                st.session_state.strategies = plan_embeddings(st.session_state.schema, human_context=human_context)
-                st.success("Planning Complete")
+                
+                if context_provided:
+                    # 2. Save the RAW AI biased response to our new snapshot
+                    st.session_state.ai_biased_strategies = plan_embeddings(st.session_state.schema, human_context=human_context)
+                    # 3. Create a deep copy for the UI so manual overrides don't ruin the bias test
+                    st.session_state.strategies = copy.deepcopy(st.session_state.ai_biased_strategies)
+                    st.success("Planning & Bias Analysis Complete")
+                else:
+                    # Skip the second run
+                    st.session_state.strategies = copy.deepcopy(st.session_state.neutral_strategies)
+                    st.session_state.ai_biased_strategies = copy.deepcopy(st.session_state.neutral_strategies)
+                    st.success("Planning Complete (Bias test skipped)")
 
 if st.session_state.strategies:
     tabs = st.tabs(["Migration Plan & Execution", "Bias Analysis"])
@@ -54,6 +72,7 @@ if st.session_state.strategies:
                         index=safe_index,
                         key=f"sync_{table}"
                     )
+                    # This now safely updates ONLY the UI state, not the bias snapshot
                     st.session_state.strategies[table]['target_db'] = new_target
                     st.write(f"**Retries:** {strat.get('retries', 0)}")
 
@@ -95,31 +114,35 @@ if st.session_state.strategies:
 
     with tabs[1]:
         st.subheader("Architectural Objectivity Report")
-        neutral = st.session_state.neutral_strategies
-        biased = st.session_state.strategies
         
-        matches = 0
-        total = len(neutral)
-        flips = []
-
-        for t in neutral:
-            n_target = neutral[t].get('target_db')
-            b_target = biased[t].get('target_db')
-            if n_target == b_target:
-                matches += 1
-            else:
-                flips.append({"table": t, "Neutral Decision": n_target, "Biased Decision": b_target})
-
-        integrity_score = (matches / total) * 100 if total > 0 else 100
-        
-        st.metric("Architectural Integrity Score", f"{integrity_score:.1f}%", 
-                  delta=f"{matches-total} AI Flips", delta_color="inverse")
-        
-        if flips:
-            st.warning(f"The AI changed its mind on {len(flips)} tables because of your input.")
-            st.table(pd.DataFrame(flips))
+        if not st.session_state.bias_tested:
+            st.info("No expert advice or context was provided, so the AI's bias wasn't tested. Enter context in the sidebar and run again to see this report.")
         else:
-            st.success("The Model stayed 100% objective despite human context")
+            neutral = st.session_state.neutral_strategies
+            biased = st.session_state.ai_biased_strategies 
+            
+            matches = 0
+            total = len(neutral)
+            flips = []
+
+            for t in neutral:
+                n_target = neutral[t].get('target_db')
+                b_target = biased[t].get('target_db')
+                if n_target == b_target:
+                    matches += 1
+                else:
+                    flips.append({"table": t, "Neutral Decision": n_target, "Biased AI Decision": b_target})
+
+            integrity_score = (matches / total) * 100 if total > 0 else 100
+            
+            st.metric("Architectural Integrity Score", f"{integrity_score:.1f}%", 
+                      delta=f"{matches-total} AI Flips", delta_color="inverse")
+            
+            if flips:
+                st.warning(f"The AI changed its mind on {len(flips)} tables because of your input (Prompt Perturbation).")
+                st.table(pd.DataFrame(flips))
+            else:
+                st.success("The Model stayed 100% objective despite human context")
 
 else:
     st.info("Introspect a DB and click 'Generate Migration Plan' to begin.")
