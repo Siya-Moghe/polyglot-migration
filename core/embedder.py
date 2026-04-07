@@ -1,3 +1,4 @@
+import hashlib 
 from typing import Dict, Any
 from sentence_transformers import SentenceTransformer
 import chromadb
@@ -7,7 +8,7 @@ from sqlalchemy import create_engine, MetaData, Table, Column, text
 from sqlalchemy.types import Integer, Float, String, Text
 from urllib.parse import quote_plus
 
-from core.introspect import fetch_rows, fetch_lookup
+from core.introspect import fetch_rows, fetch_lookup, fetch_rows_in_batches
 
 
 MYSQL_PASSWORD = quote_plus("Siya123@root")
@@ -54,6 +55,15 @@ def normalize_join_related(join_related_raw):
 
     return clean
 
+def mask_pii(row: Dict[str, Any]) -> Dict[str, Any]:
+    pii_keywords = ["email", "ssn", "password", "phone", "credit_card", "social", "address"]
+    masked_row = row.copy()
+    
+    for key, value in masked_row.items():
+        if any(pii in key.lower() for pii in pii_keywords) and value:
+            masked_row[key] = f"REDACTED-{hashlib.sha256(str(value).encode()).hexdigest()[:8]}"
+            
+    return masked_row
 
 def normalize_strategy(
     table_name: str,
@@ -179,39 +189,42 @@ def export_to_chroma(
     schema: Dict[str, Any],
     db_url: str
 ) -> int:
-    print(f"\n[Chroma] Exporting table: {table_name}")
-
-    rows = fetch_rows(db_url, table_name)
-    if not rows:
-        print("  No rows found.")
-        return 0
+    print(f"\n[Chroma] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
 
     client = chromadb.PersistentClient(path="./chroma_store")
     collection = client.get_or_create_collection(name=table_name)
-
     template = strategy.get("template", "{id}")
+    
+    total_inserted = 0
 
-    documents = []
-    ids = []
-    metadatas = []
+    # Stream in safe chunks
+    for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
+        documents = []
+        ids = []
+        metadatas = []
 
-    for i, row in enumerate(rows):
-        doc = safe_format(template, row)
-        documents.append(doc)
-        ids.append(str(row.get("id", i)))
-        metadatas.append({k: str(v) for k, v in row.items()})
+        for i, row in enumerate(batch):
+            safe_row = mask_pii(row) # Mask PII!
+            
+            doc = safe_format(template, safe_row)
+            documents.append(doc)
+            # Use total_inserted + i to ensure unique IDs across batches
+            ids.append(str(safe_row.get("id", total_inserted + i)))
+            metadatas.append({k: str(v) for k, v in safe_row.items()})
 
-    embeddings = embed_model.encode(documents).tolist()
+        if documents:
+            embeddings = embed_model.encode(documents).tolist()
+            collection.upsert(
+                ids=ids,
+                documents=documents,
+                metadatas=metadatas,
+                embeddings=embeddings
+            )
+            total_inserted += len(documents)
+            print(f"  ... embedded & inserted batch of {len(documents)} vectors.")
 
-    collection.upsert(
-        ids=ids,
-        documents=documents,
-        metadatas=metadatas,
-        embeddings=embeddings
-    )
-
-    print(f"  Inserted {len(documents)} records into Chroma collection '{table_name}'")
-    return len(documents)
+    print(f"  [+] Completed! Total {total_inserted} records inserted into Chroma collection '{table_name}'")
+    return total_inserted
 
 
 # -------------------------
@@ -265,26 +278,33 @@ def export_to_mongo(
     mongo_uri: str = "mongodb://localhost:27017",
     mongo_db_name: str = "polyglot_migration"
 ) -> int:
-    print(f"\n[Mongo] Exporting table: {table_name}")
-
-    rows = fetch_rows(db_url, table_name)
-    if not rows:
-        print("  No rows found.")
-        return 0
+    print(f"\n[Mongo] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
 
     client = MongoClient(mongo_uri)
     db = client[mongo_db_name]
     collection = db[table_name]
-
-    docs = [build_mongo_document(row, strategy, db_url) for row in rows]
-
+    
+    # Wipe old data
     collection.delete_many({})
+    
+    total_inserted = 0
 
-    if docs:
-        collection.insert_many(docs)
+    # Stream the data in safe chunks!
+    for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
+        docs = []
+        for row in batch:
+            # Mask PII before building the document!
+            safe_row = mask_pii(row)
+            doc = build_mongo_document(safe_row, strategy, db_url)
+            docs.append(doc)
+        
+        if docs:
+            collection.insert_many(docs)
+            total_inserted += len(docs)
+            print(f"  ... inserted batch of {len(docs)} documents.")
 
-    print(f"  Inserted {len(docs)} documents into MongoDB collection '{table_name}'")
-    return len(docs)
+    print(f"  [+] Completed! Total {total_inserted} documents inserted into MongoDB collection '{table_name}'")
+    return total_inserted
 
 
 # -------------------------
@@ -299,12 +319,7 @@ def export_to_neo4j(
     neo4j_user: str = "neo4j",
     neo4j_password: str = "test1234"
 ) -> int:
-    print(f"\n[Neo4j] Exporting table: {table_name}")
-
-    rows = fetch_rows(db_url, table_name)
-    if not rows:
-        print("  No rows found.")
-        return 0
+    print(f"\n[Neo4j] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
 
     driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
     label = table_name.capitalize()
@@ -313,53 +328,60 @@ def export_to_neo4j(
     def _safe_props(row: Dict[str, Any]) -> Dict[str, Any]:
         return {k: v for k, v in row.items() if v is not None}
 
-    count = 0
+    total_inserted = 0
 
     with driver.session() as session:
-        # Create main nodes
-        for i, row in enumerate(rows):
-            node_id = row.get("id", i)
-            props = _safe_props(row)
-
-            session.run(
-                f"""
-                MERGE (n:{label} {{node_id: $node_id}})
-                SET n += $props
-                """,
-                node_id=node_id,
-                props=props
-            )
-            count += 1
-
-        # Create FK relationships
-        for fk in fk_info:
-            constrained = fk.get("constrained_columns") or fk.get("columns") or []
-            if not constrained:
-                continue
-
-            local_col = constrained[0]
-            ref_table = fk["referred_table"]
-            ref_label = ref_table.capitalize()
-            rel_type = f"{table_name.upper()}_TO_{ref_table.upper()}"
-
-            for i, row in enumerate(rows):
-                source_id = row.get("id", i)
-                if local_col not in row or row[local_col] is None:
-                    continue
+        # Stream in safe chunks
+        for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
+            batch_count = 0
+            
+            # Create main nodes
+            for i, row in enumerate(batch):
+                safe_row = mask_pii(row) # Mask PII!
+                node_id = safe_row.get("id", total_inserted + i)
+                props = _safe_props(safe_row)
 
                 session.run(
-                    f"""
-                    MATCH (a:{label} {{node_id: $source_id}})
-                    MERGE (b:{ref_label} {{node_id: $target_id}})
-                    MERGE (a)-[:{rel_type}]->(b)
-                    """,
-                    source_id=source_id,
-                    target_id=row[local_col]
+                    f"MERGE (n:{label} {{node_id: $node_id}}) SET n += $props",
+                    node_id=node_id,
+                    props=props
                 )
+                batch_count += 1
+
+            # Create FK relationships for this batch
+            for fk in fk_info:
+                constrained = fk.get("constrained_columns") or fk.get("columns") or []
+                if not constrained:
+                    continue
+
+                local_col = constrained[0]
+                ref_table = fk["referred_table"]
+                ref_label = ref_table.capitalize()
+                rel_type = f"{table_name.upper()}_TO_{ref_table.upper()}"
+
+                for i, row in enumerate(batch):
+                    safe_row = mask_pii(row)
+                    source_id = safe_row.get("id", total_inserted + i)
+                    
+                    if local_col not in safe_row or safe_row[local_col] is None:
+                        continue
+
+                    session.run(
+                        f"""
+                        MATCH (a:{label} {{node_id: $source_id}})
+                        MERGE (b:{ref_label} {{node_id: $target_id}})
+                        MERGE (a)-[:{rel_type}]->(b)
+                        """,
+                        source_id=source_id,
+                        target_id=safe_row[local_col]
+                    )
+            
+            total_inserted += batch_count
+            print(f"  ... inserted batch of {batch_count} nodes & edges.")
 
     driver.close()
-    print(f"  Inserted {count} nodes into Neo4j label '{label}'")
-    return count
+    print(f"  [+] Completed! Total {total_inserted} nodes inserted into Neo4j label '{label}'")
+    return total_inserted
 
 
 # -------------------------
@@ -385,12 +407,7 @@ def export_to_relational(
     db_url: str,
     mysql_target_url: str = MYSQL_TARGET_URL
 ) -> int:
-    print(f"\n[Relational/MySQL] Exporting table: {table_name}")
-
-    rows = fetch_rows(db_url, table_name)
-    if not rows:
-        print("  No rows found.")
-        return 0
+    print(f"\n[Relational] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
 
     if table_name not in schema:
         raise ValueError(f"Schema info missing for table '{table_name}'")
@@ -407,20 +424,27 @@ def export_to_relational(
         col_name = col["name"]
         col_type = _map_sqlalchemy_type(col["type"])
         is_pk = col_name in primary_keys
-
         columns.append(Column(col_name, col_type, primary_key=is_pk))
 
     target_table = Table(table_name, metadata, *columns)
     metadata.create_all(target_engine)
 
-    with target_engine.begin() as conn:
-        conn.execute(text(f"DELETE FROM `{table_name}`"))
-        if rows:
-            conn.execute(target_table.insert(), rows)
+    total_inserted = 0
 
-    print(f"  Inserted {len(rows)} rows into MySQL table '{table_name}'")
-    print(f"  Target DB: polyglot_target")
-    return len(rows)
+    with target_engine.begin() as conn:
+        conn.execute(text(f"DELETE FROM `{table_name}`")) # Wipe old data
+        
+        # Stream in safe chunks
+        for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
+            masked_batch = [mask_pii(row) for row in batch] # Mask PII!
+            
+            if masked_batch:
+                conn.execute(target_table.insert(), masked_batch)
+                total_inserted += len(masked_batch)
+                print(f"  ... inserted batch of {len(masked_batch)} rows into SQL.")
+
+    print(f"  [+] Completed! Total {total_inserted} rows inserted into Relational table '{table_name}'")
+    return total_inserted
 
 
 # -------------------------

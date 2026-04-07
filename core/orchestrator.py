@@ -207,6 +207,15 @@ Return ONLY JSON:
 
     try:
         result = extract_json(raw_response)
+        raw_target = str(result.get("target_db", "")).lower()
+        valid_dbs = {"chroma", "mongo", "neo4j", "relational"}
+        
+        if raw_target not in valid_dbs:
+            found = [db for db in valid_dbs if db in raw_target]
+            if len(found) == 1:
+                result["target_db"] = found[0]
+            else:
+                raise ValueError(f"Invalid LLM target: {raw_target}")
     except Exception:
         result = {
             "target_db": best_target,
@@ -218,10 +227,13 @@ Return ONLY JSON:
     result["routing_confidence_gap"] = confidence_gap
     result["routing_method"] = "llm_tiebreak"
 
-    print(f"  [orchestrator] routed '{table_name}' -> {result['target_db'].upper()}")
+    final_target = str(result.get("target_db", best_target)).strip().lower()
+
+    print(f"   [orchestrator] routed '{table_name}' -> {final_target.upper()}")
+    
     return {
         **state,
-        "target_db": result["target_db"],
+        "target_db": final_target, # This must be lowercase to match g.add_node names
         "routing_reason": result.get("reasoning", "LLM routing decision."),
         "strategy": result
     }
@@ -299,7 +311,7 @@ def route_to_specialist(state: StrategyState) -> str:
 
 
 def route_retry(state: StrategyState) -> str:
-    return f"analyze_{state['target_db']}"
+    return f"analyze_{state['target_db'].lower()}"
 
 
 def _build_graph() -> Any:

@@ -76,39 +76,42 @@ def node_validate_chroma(state: StrategyState) -> StrategyState:
     errors = []
 
     valid_cols = {c["name"] for c in info["columns"]}
-    fk_targets = {fk["referred_table"] for fk in info["foreign_keys"]}
+    fk_targets = {fk["referred_table"] for fk in info.get("foreign_keys", [])}
 
-    # -------------------------
-    # Basic structure validation
-    # -------------------------
-    if "template" not in strategy:
-        errors.append("Missing 'template' field")
+    # 1. Validate Template
+    template = strategy.get("template", "")
+    if not isinstance(template, str) or not template:
+        errors.append("Missing or invalid 'template' string.")
 
-    for col in strategy.get("used_columns", []):
-        if col not in valid_cols:
-            errors.append(f"Invalid column in used_columns: '{col}'")
+    # 2. Validate Joins (Foreign Keys)
+    joins = strategy.get("joins", [])
+    if not isinstance(joins, list):
+        errors.append("'joins' must be a list of strings.")
+        joins = []
+        
+    for j in joins:
+        # --- FIX: Check if j is a string before checking set ---
+        if not isinstance(j, str):
+            errors.append(f"Invalid join format: expected string, got {type(j).__name__}")
+        elif j not in fk_targets:
+            errors.append(f"Invalid join table: '{j}'. Not a valid foreign key.")
 
-    for j in strategy.get("join_related", []):
-        if j not in fk_targets:
-            errors.append(f"Invalid join_related table: '{j}' (not a FK target)")
+    # 3. Validate Used Columns
+    used = strategy.get("used_columns", [])
+    if not isinstance(used, list):
+        errors.append("'used_columns' must be a list of strings.")
+        used = []
 
-    # -------------------------
-    # Semantic quality validation
-    # -------------------------
-    semantic_candidates = {
-        c["name"] for c in info["columns"]
-        if any(k in c["name"].lower() for k in [
-            "title", "description", "content", "abstract", "summary",
-            "review", "body", "text", "notes", "comment"
-        ])
-    }
+    for c in used:
+        # --- FIX: Check if c is a string before checking set ---
+        if not isinstance(c, str):
+            errors.append(f"Invalid column format: expected string, got {type(c).__name__}")
+        elif c not in valid_cols:
+            errors.append(f"Invalid column: '{c}'")
 
-    used = set(strategy.get("used_columns", []))
-
-    if semantic_candidates and not (used & semantic_candidates):
-        errors.append(
-            f"Chroma strategy ignored semantic text columns: {sorted(semantic_candidates)}"
-        )
+    # 4. Final Quality Check
+    if len(used) < 1:
+        errors.append("Chroma strategy must select at least one column for embedding.")
 
     return {**state, "errors": errors}
 

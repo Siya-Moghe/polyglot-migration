@@ -81,18 +81,43 @@ def node_validate_mongo(state: StrategyState) -> StrategyState:
     if "fields" not in strategy and "used_columns" not in strategy:
         errors.append("Missing 'fields' list")
 
-    for col in strategy.get("fields", strategy.get("used_columns", [])):
-        if col not in valid_cols:
+    # --- HARDENED FIX: Check if 'fields' is actually a list ---
+    fields_list = strategy.get("fields", strategy.get("used_columns", []))
+    if not isinstance(fields_list, list):
+        errors.append("'fields' must be a list of strings.")
+        fields_list = []
+        
+    for col in fields_list:
+        # If the LLM hallucinated a dict instead of a string, catch it safely
+        if not isinstance(col, str):
+            errors.append(f"Invalid field format (expected string, got {type(col).__name__}). Do not use dictionaries.")
+        elif col not in valid_cols:
             errors.append(f"Invalid column in fields: '{col}'")
 
-    for parent, children in (strategy.get("nested_fields") or {}).items():
+    # --- HARDENED FIX: Check 'nested_fields' ---
+    nested = strategy.get("nested_fields") or {}
+    if not isinstance(nested, dict):
+        errors.append("'nested_fields' must be a dictionary.")
+        nested = {}
+
+    for parent, children in nested.items():
+        if not isinstance(children, list):
+            errors.append(f"'nested_fields['{parent}']' must be a list of strings.")
+            continue
         for col in children:
-            if col not in valid_cols:
+            if not isinstance(col, str):
+                errors.append(f"Invalid nested field format (expected string, got {type(col).__name__}).")
+            elif col not in valid_cols:
                 errors.append(f"Invalid column in nested_fields['{parent}']: '{col}'")
 
-    all_selected = set(strategy.get("fields", strategy.get("used_columns", [])))
-    for children in (strategy.get("nested_fields") or {}).values():
-        all_selected.update(children)
+    # Calculate all selected safely
+    all_selected = set()
+    for c in fields_list:
+        if isinstance(c, str): all_selected.add(c)
+    for children in nested.values():
+        if isinstance(children, list):
+            for c in children:
+                if isinstance(c, str): all_selected.add(c)
 
     if len(all_selected) < max(1, len(valid_cols) // 2):
         errors.append("Mongo strategy selected too few columns for a useful document.")

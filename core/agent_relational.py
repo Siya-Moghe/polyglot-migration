@@ -78,36 +78,26 @@ def node_validate_relational(state: StrategyState) -> StrategyState:
     errors = []
 
     valid_cols = {c["name"] for c in info["columns"]}
-    fk_targets = {fk["referred_table"] for fk in info["foreign_keys"]}
 
-    if strategy.get("preserve_as") != "table":
-        errors.append("Missing or invalid 'preserve_as' (must be 'table')")
-    if "primary_use" not in strategy:
-        errors.append("Missing 'primary_use'")
-    if "reasoning" not in strategy:
-        errors.append("Missing 'reasoning'")
+    # Check used_columns
+    used = strategy.get("used_columns", [])
+    if not isinstance(used, list):
+        errors.append("'used_columns' must be a list of strings.")
+        used = []
 
-    for col in strategy.get("used_columns", []):
-        if col not in valid_cols:
-            errors.append(f"Invalid column in used_columns: '{col}'")
-    for col in strategy.get("skipped_columns", []):
-        if col not in valid_cols:
-            errors.append(f"Invalid column in skipped_columns: '{col}'")
-    for j in strategy.get("join_related", []):
-        if j not in fk_targets:
-            errors.append(f"Invalid join_related table: '{j}'")
+    for c in used:
+        if not isinstance(c, str):
+            errors.append(f"Invalid column format: expected string, got {type(c).__name__}")
+        elif c not in valid_cols:
+            errors.append(f"Invalid column: '{c}'")
 
+    # Check primary_use
+    p_use = strategy.get("primary_use", "")
+    if not isinstance(p_use, str):
+        errors.append("primary_use must be a string (e.g., 'transactional').")
 
-    semantic_candidates = {
-        c["name"] for c in info["columns"]
-        if any(k in c["name"].lower() for k in [
-            "content", "description", "body", "summary", "review", "abstract", "notes"
-        ])
-    }
-
-    if semantic_candidates and strategy.get("primary_use") == "lookup":
-        errors.append("Relational strategy suspicious: semantic-heavy table classified as lookup.")
-        
+    if len(used) == 0:
+        errors.append("Relational strategy must keep at least one column.")
 
     return {**state, "errors": errors}
 

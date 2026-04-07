@@ -65,6 +65,18 @@ def fetch_lookup(db_url: str, table_name: str, key_column: str, key_value):
             {"val": key_value}
         ).fetchone()
         return dict(result._mapping) if result else None
+    
+def fetch_rows_in_batches(db_url: str, table_name: str, batch_size: int = 5000):
+    
+    engine = create_engine(db_url)
+    with engine.connect().execution_options(stream_results=True) as conn:
+        result = conn.execute(text(f"SELECT * FROM {table_name}"))
+        
+        while True:
+            chunk = result.fetchmany(batch_size)
+            if not chunk:
+                break
+            yield [dict(row._mapping) for row in chunk]
 
 if __name__ == "__main__":
     import json

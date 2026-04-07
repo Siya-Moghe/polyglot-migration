@@ -77,24 +77,35 @@ def node_validate_neo4j(state: StrategyState) -> StrategyState:
     errors = []
 
     valid_cols = {c["name"] for c in info["columns"]}
-
-    if "template" not in strategy:
-        errors.append("Missing 'template' field")
-    for col in strategy.get("used_columns", []):
-        if col not in valid_cols:
-            errors.append(f"Invalid column in used_columns: '{col}'")
-
+    fk_info = info.get("foreign_keys", [])
     
-    fk_cols = {
-    col
-    for fk in info.get("foreign_keys", [])
-    for col in fk.get("columns", [])
-    }
+    # Check template
+    template = strategy.get("template", "")
+    if not isinstance(template, str) or not template:
+        errors.append("Missing 'template' Cypher string.")
 
-    used = set(strategy.get("used_columns", []))
+    # Check edges
+    edges = strategy.get("edges", [])
+    if not isinstance(edges, list):
+        errors.append("'edges' must be a list of strings.")
+        edges = []
 
-    if len(fk_cols) >= 2 and not fk_cols.issubset(used):
-        errors.append("Neo4j strategy failed to include all FK relationship columns.")
+    for e in edges:
+        if not isinstance(e, str):
+            errors.append(f"Invalid edge format: expected string, got {type(e).__name__}")
+        # Logic to check if edge exists in FKs can go here if needed
+
+    # Check properties (columns used)
+    props = strategy.get("properties", [])
+    if not isinstance(props, list):
+        errors.append("'properties' must be a list of strings.")
+        props = []
+
+    for p in props:
+        if not isinstance(p, str):
+            errors.append(f"Invalid property format: expected string, got {type(p).__name__}")
+        elif p not in valid_cols:
+            errors.append(f"Invalid column in properties: '{p}'")
 
     return {**state, "errors": errors}
 
