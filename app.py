@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import copy # NEEDED to separate your overrides from the AI's original answers
+import copy
 from core.introspect import introspect_schema
 from core.orchestrator import plan_embeddings
 from core.embedder import embed_and_store
@@ -49,6 +49,11 @@ with st.sidebar:
                     st.session_state.strategies = copy.deepcopy(st.session_state.neutral_strategies)
                     st.session_state.ai_biased_strategies = copy.deepcopy(st.session_state.neutral_strategies)
                     st.success("Planning Complete (Bias test skipped)")
+                
+                # --- CRITICAL ADDITION: SAVE MANIFEST FOR AUDIT.PY ---
+                from core.orchestrator import save_migration_manifest
+                save_migration_manifest(st.session_state.strategies, db_url)
+                # -----------------------------------------------------
 
 if st.session_state.strategies:
     tabs = st.tabs(["Migration Plan & Execution", "Bias Analysis"])
@@ -95,6 +100,8 @@ if st.session_state.strategies:
         
         if st.button("Execute Final Migration", type="primary"):
             with st.status("Migrating Data...", expanded=True) as status:
+                from core.orchestrator import save_migration_manifest
+                save_migration_manifest(st.session_state.strategies, db_url)
                 for table, strat in st.session_state.strategies.items():
                     target = strat.get('target_db', 'UNKNOWN').upper()
                     st.write(f"Exporting `{table}` to **{target}**...")

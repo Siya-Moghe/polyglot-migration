@@ -19,10 +19,6 @@ def run_pipeline(connection_string: str, tables: list[str] | None = None) -> Non
         fk_list = [f["referred_table"] for f in tinfo["foreign_keys"]]
         print(f"  {tname:20s} cols={len(tinfo['columns'])} fk->{fk_list}")
 
-    # ------------------------------------------------------------------
-    # Fetch sample rows for schema-aware prompt enrichment (IMPROVEMENT 4)
-    # We fetch just the first 2 rows per table — no performance impact.
-    # ------------------------------------------------------------------
     print("\n  Fetching sample rows for prompt enrichment...")
     sample_rows_map: dict[str, list] = {}
     for tname in schema:
@@ -35,7 +31,9 @@ def run_pipeline(connection_string: str, tables: list[str] | None = None) -> Non
     print("\nSTAGE 2 - LangGraph Multi-Agent Orchestrator")
     print("-" * 40)
     strategies = plan_embeddings(schema, sample_rows_map=sample_rows_map)
-
+    from core.orchestrator import save_migration_manifest 
+    save_migration_manifest(strategies, connection_string)
+    
     print("\nAGENT REASONING & STRATEGY SUMMARY")
     print("-" * 40)
     fallback_count = 0
@@ -53,7 +51,7 @@ def run_pipeline(connection_string: str, tables: list[str] | None = None) -> Non
         print(f"  Cols Dropped : {strat.get('skipped_columns', [])}")
         print(f"  Tables Joined: {strat.get('join_related', [])}")
         print(f"  Column Logic : {strat.get('reasoning', 'N/A')}")
-        print(f"  Fallback Used: {'YES ⚠' if fallback else 'NO ✓'}")
+        print(f"  Fallback Used: {'YES' if fallback else 'NO '}")
 
         if db == "CHROMA":
             template_preview = str(strat.get("template", ""))[:120].replace("\n", "")

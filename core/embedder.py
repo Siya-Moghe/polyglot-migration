@@ -11,7 +11,7 @@ from urllib.parse import quote_plus
 from core.introspect import fetch_rows, fetch_lookup, fetch_rows_in_batches
 
 
-MYSQL_PASSWORD = quote_plus("Siya123@root")
+MYSQL_PASSWORD = quote_plus("16211402319")
 MYSQL_TARGET_URL = f"mysql+pymysql://root:{MYSQL_PASSWORD}@localhost:3306/polyglot_target"
 
 
