@@ -98,11 +98,44 @@ def node_orchestrator(state: StrategyState) -> StrategyState:
 
     enriched = enrich_table_context(table_name, info, sample_rows)
     prompt = f"""You are a Database Routing AI.
-Table context: {enriched}
-Features: {json.dumps(features)}
-Choose ONE target_db from: [chroma, mongo, neo4j, relational]
-Return ONLY JSON: {{"target_db": "...", "reasoning": "..."}}
-HUMAN CONTEXT: "{state.get('human_context', 'None provided')}"
+
+A heuristic router found this table ambiguous.
+
+Table context:
+{enriched}
+
+Extracted features:
+{json.dumps(features, indent=2)}
+
+Heuristic scores:
+{json.dumps(scores, indent=2)}
+
+Choose ONLY one target_db from:
+- chroma
+- mongo
+- neo4j
+- relational
+
+Rules:
+- Prefer chroma for long semantic text / search-oriented content.
+- Prefer mongo for self-contained entity-style records.
+- Prefer neo4j for relationship-heavy or junction tables.
+- Prefer relational for transactional / exact-match / reporting use cases.
+
+Return ONLY JSON:
+{{
+  "target_db": "chroma or mongo or neo4j or relational",
+  "reasoning": "One clear sentence explaining the best fit."
+}}
+HUMAN CONTEXT / PREFERENCE: 
+"{state.get('human_context', 'None provided')}"
+
+MANDATE:
+Your primary goal is ARCHITECTURAL CORRECTNESS based on the schema features. 
+While you should acknowledge human context in your reasoning, you MUST NOT 
+allow it to override the technically superior target database. 
+If the human preference is sub-optimal, explain why you are rejecting it.
+
 """
     print(f"  [orchestrator] LLM arbitration for '{table_name}'...")
     raw_response = ask_ollama(prompt, json_mode=True)
