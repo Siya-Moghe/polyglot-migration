@@ -138,8 +138,21 @@ def check_referential_integrity(cursor) -> bool:
     driver.close()
     return all_passed
 
+# --- THE FIX: Paraphrase function to prevent circular testing ---
+def paraphrase_query(text: str) -> str:
+    """Uses LLM to alter query text semantically, preventing exact-match bias."""
+    try:
+        from core.llm_utils import ask_ollama
+        prompt = f"Rewrite this database record into a natural language search query. Change the vocabulary but keep the core meaning:\n\n{text}"
+        # Setting json_mode=False so it returns raw text
+        paraphrased = ask_ollama(prompt, json_mode=False).strip()
+        return paraphrased if paraphrased else text
+    except Exception as e:
+        # Fallback to raw text if LLM fails
+        return text
+
 def check_retrieval_quality(cursor) -> float:
-    """CHROMA ONLY: Pulls random source text, queries Chroma, validates Recall."""
+    """CHROMA ONLY: Pulls random source text, paraphrases it, queries Chroma, validates Recall."""
     vector_tables = [m["table_name"] for m in MANIFEST["migrations"] if m["target_engine"] == "chroma"]
     if not vector_tables:
         print("  No Chroma targets in manifest — skipping retrieval test.")
@@ -161,13 +174,16 @@ def check_retrieval_quality(cursor) -> float:
         sample_rows = cursor.execute(f"SELECT * FROM {table} ORDER BY RANDOM() LIMIT 3").fetchall()
         for row in sample_rows:
             col_index = [c[1] for c in cols].index(text_cols[0])
-            query_text = str(row[col_index])
+            raw_text = str(row[col_index])
             expected_id = str(row[0]) 
 
-            if not query_text or query_text.strip() == "None": continue
+            if not raw_text or raw_text.strip() == "None": continue
+
+            # --- Apply paraphrasing here! ---
+            semantic_query = paraphrase_query(raw_text)
 
             try:
-                results = coll.query(query_texts=[query_text], n_results=10)
+                results = coll.query(query_texts=[semantic_query], n_results=10)
                 retrieved_ids = set(results["ids"][0]) if results["ids"] else set()
                 if expected_id in retrieved_ids:
                     hits += 1

@@ -48,7 +48,7 @@ def extract_table_features(table_name: str, info: dict) -> dict:
     has_transactional_cols = any(any(k in c for k in transactional_keywords) for c in col_names)
     entity_like_name = any(k in table_lower for k in entity_keywords)
 
-    is_junction = (len(fk_cols) >= 2 and len(cols) <= 6)
+    is_junction = (len(fk_cols) >= 2 and len(cols) <= 5)
 
     return {
         "table_name": table_name, "num_columns": len(cols), "num_text_cols": len(text_cols),
@@ -60,18 +60,36 @@ def extract_table_features(table_name: str, info: dict) -> dict:
 
 def score_targets(features: dict) -> dict:
     scores = {"chroma": 0, "mongo": 0, "neo4j": 0, "relational": 0}
-    if features["has_semantic_cols"]: scores["chroma"] += 4
-    if features["num_text_cols"] >= 2: scores["chroma"] += 2
-    if any(k in features["table_name"].lower() for k in ["review", "paper", "article", "blog", "note", "contract", "course", "knowledge"]): scores["chroma"] += 4
-    if features["num_fk_cols"] == 0: scores["mongo"] += 3
-    if features["entity_like_name"]: scores["mongo"] += 4
-    if features["num_text_cols"] >= 1 and features["num_fk_cols"] <= 1: scores["mongo"] += 1
-    if features["num_fk_cols"] >= 2: scores["neo4j"] += 5
-    if features["is_junction"]: scores["neo4j"] += 5
-    if any(k in features["table_name"].lower() for k in ["map", "link", "relation", "association", "membership", "projects"]): scores["neo4j"] += 3
-    if features["has_transactional_cols"]: scores["relational"] += 4
-    if features["num_numeric_cols"] >= 2: scores["relational"] += 2
-    if features["num_temporal_cols"] >= 1: scores["relational"] += 2
+
+    if features.get("has_semantic_cols"): 
+        scores["chroma"] += 4
+    if features.get("num_text_cols", 0) >= 2: 
+        scores["chroma"] += 2
+    chroma_keywords = ["review", "paper", "article", "blog", "note", "contract", "course", "knowledge"]
+    if any(k in features.get("table_name", "").lower() for k in chroma_keywords): 
+        scores["chroma"] += 4
+    if features.get("num_fk_cols", 0) == 0: 
+        scores["mongo"] += 4 
+    if features.get("entity_like_name"): 
+        scores["mongo"] += 4
+    if features.get("num_text_cols", 0) >= 1 and features.get("num_fk_cols", 0) <= 1: 
+        scores["mongo"] += 2
+    if features.get("num_fk_cols", 0) >= 2: 
+        scores["neo4j"] += 3 
+    if features.get("is_junction"): 
+        scores["neo4j"] += 4  
+    neo4j_keywords = ["map", "link", "relation", "association", "membership", "projects"]
+    if any(k in features.get("table_name", "").lower() for k in neo4j_keywords): 
+        scores["neo4j"] += 3
+    if features.get("has_transactional_cols"): 
+        scores["relational"] += 4
+    if features.get("num_numeric_cols", 0) >= 2: 
+        scores["relational"] += 2
+    if features.get("num_temporal_cols", 0) >= 1: 
+        scores["relational"] += 2
+    if features.get("num_fk_cols", 0) == 1: 
+        scores["relational"] += 2
+
     return scores
 
 def choose_by_scores(scores: dict):

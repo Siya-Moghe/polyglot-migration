@@ -1,4 +1,3 @@
-import hashlib 
 from typing import Dict, Any
 from sentence_transformers import SentenceTransformer
 import chromadb
@@ -9,7 +8,6 @@ from sqlalchemy.types import Integer, Float, String, Text
 from urllib.parse import quote_plus
 
 from core.introspect import fetch_rows, fetch_lookup, fetch_rows_in_batches
-
 
 MYSQL_PASSWORD = quote_plus("16211402319")
 MYSQL_TARGET_URL = f"mysql+pymysql://root:{MYSQL_PASSWORD}@localhost:3306/polyglot_target"
@@ -55,15 +53,6 @@ def normalize_join_related(join_related_raw):
 
     return clean
 
-def mask_pii(row: Dict[str, Any]) -> Dict[str, Any]:
-    pii_keywords = ["email", "ssn", "password", "phone", "credit_card", "social", "address"]
-    masked_row = row.copy()
-    
-    for key, value in masked_row.items():
-        if any(pii in key.lower() for pii in pii_keywords) and value:
-            masked_row[key] = f"REDACTED-{hashlib.sha256(str(value).encode()).hexdigest()[:8]}"
-            
-    return masked_row
 
 def normalize_strategy(
     table_name: str,
@@ -189,7 +178,7 @@ def export_to_chroma(
     schema: Dict[str, Any],
     db_url: str
 ) -> int:
-    print(f"\n[Chroma] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
+    print(f"\n[Chroma] Exporting table: {table_name} (Using Batch Streaming)")
 
     client = chromadb.PersistentClient(path="./chroma_store")
     collection = client.get_or_create_collection(name=table_name)
@@ -197,20 +186,18 @@ def export_to_chroma(
     
     total_inserted = 0
 
-    # Stream in safe chunks
+    # Stream in chunks
     for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
         documents = []
         ids = []
         metadatas = []
 
         for i, row in enumerate(batch):
-            safe_row = mask_pii(row) # Mask PII!
-            
-            doc = safe_format(template, safe_row)
+            doc = safe_format(template, row)
             documents.append(doc)
             # Use total_inserted + i to ensure unique IDs across batches
-            ids.append(str(safe_row.get("id", total_inserted + i)))
-            metadatas.append({k: str(v) for k, v in safe_row.items()})
+            ids.append(str(row.get("id", total_inserted + i)))
+            metadatas.append({k: str(v) for k, v in row.items()})
 
         if documents:
             embeddings = embed_model.encode(documents).tolist()
@@ -278,7 +265,7 @@ def export_to_mongo(
     mongo_uri: str = "mongodb://localhost:27017",
     mongo_db_name: str = "polyglot_migration"
 ) -> int:
-    print(f"\n[Mongo] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
+    print(f"\n[Mongo] Exporting table: {table_name} (Using Batch Streaming)")
 
     client = MongoClient(mongo_uri)
     db = client[mongo_db_name]
@@ -289,13 +276,11 @@ def export_to_mongo(
     
     total_inserted = 0
 
-    # Stream the data in safe chunks!
+    # Stream the data in chunks
     for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
         docs = []
         for row in batch:
-            # Mask PII before building the document!
-            safe_row = mask_pii(row)
-            doc = build_mongo_document(safe_row, strategy, db_url)
+            doc = build_mongo_document(row, strategy, db_url)
             docs.append(doc)
         
         if docs:
@@ -319,7 +304,7 @@ def export_to_neo4j(
     neo4j_user: str = "neo4j",
     neo4j_password: str = "test1234"
 ) -> int:
-    print(f"\n[Neo4j] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
+    print(f"\n[Neo4j] Exporting table: {table_name} (Using Batch Streaming)")
 
     driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
     label = table_name.capitalize()
@@ -331,15 +316,14 @@ def export_to_neo4j(
     total_inserted = 0
 
     with driver.session() as session:
-        # Stream in safe chunks
+        # Stream in chunks
         for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
             batch_count = 0
             
             # Create main nodes
             for i, row in enumerate(batch):
-                safe_row = mask_pii(row) # Mask PII!
-                node_id = safe_row.get("id", total_inserted + i)
-                props = _safe_props(safe_row)
+                node_id = row.get("id", total_inserted + i)
+                props = _safe_props(row)
 
                 session.run(
                     f"MERGE (n:{label} {{node_id: $node_id}}) SET n += $props",
@@ -360,10 +344,9 @@ def export_to_neo4j(
                 rel_type = f"{table_name.upper()}_TO_{ref_table.upper()}"
 
                 for i, row in enumerate(batch):
-                    safe_row = mask_pii(row)
-                    source_id = safe_row.get("id", total_inserted + i)
+                    source_id = row.get("id", total_inserted + i)
                     
-                    if local_col not in safe_row or safe_row[local_col] is None:
+                    if local_col not in row or row[local_col] is None:
                         continue
 
                     session.run(
@@ -373,7 +356,7 @@ def export_to_neo4j(
                         MERGE (a)-[:{rel_type}]->(b)
                         """,
                         source_id=source_id,
-                        target_id=safe_row[local_col]
+                        target_id=row[local_col]
                     )
             
             total_inserted += batch_count
@@ -407,7 +390,7 @@ def export_to_relational(
     db_url: str,
     mysql_target_url: str = MYSQL_TARGET_URL
 ) -> int:
-    print(f"\n[Relational] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
+    print(f"\n[Relational] Exporting table: {table_name} (Using Batch Streaming)")
 
     if table_name not in schema:
         raise ValueError(f"Schema info missing for table '{table_name}'")
@@ -434,14 +417,12 @@ def export_to_relational(
     with target_engine.begin() as conn:
         conn.execute(text(f"DELETE FROM `{table_name}`")) # Wipe old data
         
-        # Stream in safe chunks
+        # Stream in chunks
         for batch in fetch_rows_in_batches(db_url, table_name, batch_size=5000):
-            masked_batch = [mask_pii(row) for row in batch] # Mask PII!
-            
-            if masked_batch:
-                conn.execute(target_table.insert(), masked_batch)
-                total_inserted += len(masked_batch)
-                print(f"  ... inserted batch of {len(masked_batch)} rows into SQL.")
+            if batch:
+                conn.execute(target_table.insert(), batch)
+                total_inserted += len(batch)
+                print(f"  ... inserted batch of {len(batch)} rows into SQL.")
 
     print(f"  [+] Completed! Total {total_inserted} rows inserted into Relational table '{table_name}'")
     return total_inserted
