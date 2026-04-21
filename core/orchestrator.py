@@ -1,363 +1,253 @@
-"""
-orchestrator.py — Multi-agent LangGraph orchestrator for SurrealDB migration.
-
-Architecture (mirrors the original polyglot design but with SurrealDB specialists):
-
-  Stage 2 = PLANNING ONLY. No agent touches a database.
-  Stage 3 = embedder_surrealdb.py reads the final strategy and writes to SurrealDB.
-
-Per table the graph runs:
-  orchestrator → [vector_agent, graph_agent, document_agent, index_agent] in sequence
-               → merger
-
-Each specialist agent has its own analyze → validate → reflect loop.
-The orchestrator decides which agents are needed based on schema heuristics,
-then marks the others as skipped (safe defaults, no LLM call wasted).
-"""
-
-from __future__ import annotations
-
 import json
+import re
 import time
 from typing import Any
-
 from langgraph.graph import StateGraph, END
 
 from core.state import StrategyState
-from core.agents.agent_vector   import (node_analyze_vector,   node_validate_vector,   node_reflect_vector,   route_vector)
-from core.agents.agent_graph    import (node_analyze_graph,    node_validate_graph,    node_reflect_graph,    route_graph)
-from core.agents.agent_document import (node_analyze_document, node_validate_document, node_reflect_document, route_document)
-from core.agents.agent_index    import (node_analyze_index,    node_validate_index,    node_reflect_index,    route_index)
+from core.llm_utils import ask_ollama, extract_json, enrich_table_context
+from core.agents.agent_document import (
+    node_analyze_document,
+    node_validate_document,
+    route_document,
+    node_reflect_document,
+)
 
+from core.agents.agent_graph import (
+    node_analyze_graph,
+    node_validate_graph,
+    route_graph,
+    node_reflect_graph,
+)
 
-# ---------------------------------------------------------------------------
-# Schema feature extraction — heuristic, no LLM
-# ---------------------------------------------------------------------------
+from core.agents.agent_index import (
+    node_analyze_index,
+    node_validate_index,
+    route_index,
+    node_reflect_index,
+)
 
-def _is_text(t: str) -> bool:
-    return any(x in t.upper() for x in ["TEXT", "CHAR", "VARCHAR", "CLOB"])
+from core.agents.agent_vector import (
+    node_analyze_vector,
+    node_validate_vector,
+    route_vector,
+    node_reflect_vector,
+)
 
-def _is_numeric(t: str) -> bool:
-    return any(x in t.upper() for x in ["INT", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC"])
+def is_text_type(col_type: str) -> bool:
+    t = str(col_type).upper()
+    return any(x in t for x in ["TEXT", "CHAR", "VARCHAR", "CLOB"])
 
-def _is_temporal(t: str) -> bool:
-    return any(x in t.upper() for x in ["DATE", "TIME", "TIMESTAMP"])
+def is_numeric_type(col_type: str) -> bool:
+    t = str(col_type).upper()
+    return any(x in t for x in ["INT", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC"])
 
+def is_temporal_type(col_type: str) -> bool:
+    t = str(col_type).upper()
+    return any(x in t for x in ["DATE", "TIME", "TIMESTAMP"])
 
 def extract_table_features(table_name: str, info: dict) -> dict:
-    cols       = info.get("columns", [])
-    fks        = info.get("foreign_keys", [])
-    col_names  = [c["name"].lower() for c in cols]
+    cols = info.get("columns", [])
+    fks = info.get("foreign_keys", [])
+    pks = set(info.get("primary_keys", []))
 
-    semantic_kw      = ["content","description","body","text","summary","review",
-                        "abstract","note","article","comment","details","bio","title","issue"]
-    transactional_kw = ["status","amount","price","total","balance","created_at",
-                        "updated_at","timestamp","priority","deadline","quantity"]
-    entity_kw        = ["profile","product","catalog","config","setting","metadata",
-                        "country","office","vehicle","event","department"]
+    col_names = [c["name"].lower() for c in cols]
+    table_lower = table_name.lower()
+
+    text_cols = [c["name"] for c in cols if is_text_type(c["type"])]
+    numeric_cols = [c["name"] for c in cols if is_numeric_type(c["type"])]
+    temporal_cols = [c["name"] for c in cols if is_temporal_type(c["type"])]
+    fk_cols = [fk["columns"][0] for fk in fks if fk.get("columns")]
+
+    semantic_keywords = ["content", "description", "body", "text", "summary", "review", "abstract", "note", "article", "comment", "details", "bio"]
+    transactional_keywords = ["status", "amount", "price", "total", "balance", "created_at", "updated_at", "timestamp", "priority", "deadline", "quantity"]
+    entity_keywords = ["profile", "product", "catalog", "config", "setting", "metadata", "country", "office", "vehicle", "event"]
+
+    has_semantic_cols = any(any(k in c for k in semantic_keywords) for c in col_names)
+    has_transactional_cols = any(any(k in c for k in transactional_keywords) for c in col_names)
+    entity_like_name = any(k in table_lower for k in entity_keywords)
+
+    is_junction = (len(fk_cols) >= 2 and len(cols) <= 6)
 
     return {
-        "num_text_cols":          sum(1 for c in cols if _is_text(c["type"])),
-        "num_numeric_cols":       sum(1 for c in cols if _is_numeric(c["type"])),
-        "num_temporal_cols":      sum(1 for c in cols if _is_temporal(c["type"])),
-        "num_fk_cols":            sum(1 for fk in fks if fk.get("columns")),
-        "has_semantic_cols":      any(any(k in c for k in semantic_kw) for c in col_names),
-        "has_transactional_cols": any(any(k in c for k in transactional_kw) for c in col_names),
-        "entity_like_name":       any(k in table_name.lower() for k in entity_kw),
-        "is_junction":            (sum(1 for fk in fks if fk.get("columns")) >= 2 and len(cols) <= 6),
+        "table_name": table_name, "num_columns": len(cols), "num_text_cols": len(text_cols),
+        "num_numeric_cols": len(numeric_cols), "num_temporal_cols": len(temporal_cols),
+        "num_fk_cols": len(fk_cols), "has_semantic_cols": has_semantic_cols,
+        "has_transactional_cols": has_transactional_cols, "entity_like_name": entity_like_name,
+        "is_junction": is_junction, "text_cols": text_cols, "fk_cols": fk_cols, "col_names": col_names,
     }
 
+def score_targets(features: dict) -> dict:
+    scores = {"chroma": 0, "mongo": 0, "neo4j": 0, "relational": 0}
+    if features["has_semantic_cols"]: scores["chroma"] += 4
+    if features["num_text_cols"] >= 2: scores["chroma"] += 2
+    if any(k in features["table_name"].lower() for k in ["review", "paper", "article", "blog", "note", "contract", "course", "knowledge"]): scores["chroma"] += 4
+    if features["num_fk_cols"] == 0: scores["mongo"] += 3
+    if features["entity_like_name"]: scores["mongo"] += 4
+    if features["num_text_cols"] >= 1 and features["num_fk_cols"] <= 1: scores["mongo"] += 1
+    if features["num_fk_cols"] >= 2: scores["neo4j"] += 5
+    if features["is_junction"]: scores["neo4j"] += 5
+    if any(k in features["table_name"].lower() for k in ["map", "link", "relation", "association", "membership", "projects"]): scores["neo4j"] += 3
+    if features["has_transactional_cols"]: scores["relational"] += 4
+    if features["num_numeric_cols"] >= 2: scores["relational"] += 2
+    if features["num_temporal_cols"] >= 1: scores["relational"] += 2
+    return scores
 
-def derive_feature_hints(features: dict, table_name: str) -> dict:
-    return {
-        "use_vector": (
-            features["has_semantic_cols"]
-            or features["num_text_cols"] >= 2
-            or any(k in table_name.lower() for k in ["review","article","blog","note","knowledge"])
-        ),
-        "use_graph":      features["num_fk_cols"] >= 1,
-        "use_nested":     features["entity_like_name"] or (features["num_text_cols"] >= 2 and features["num_fk_cols"] <= 1),
-        "needs_indexes":  features["has_transactional_cols"] or features["num_numeric_cols"] >= 2 or features["num_temporal_cols"] >= 1,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Orchestrator node — sets hints, decides which agents to activate
-# ---------------------------------------------------------------------------
+def choose_by_scores(scores: dict):
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    best, second = ranked[0], ranked[1]
+    confidence_gap = best[1] - second[1]
+    return best[0], best[1], confidence_gap, ranked
 
 def node_orchestrator(state: StrategyState) -> StrategyState:
-    table_name = state["table_name"]
-    info       = state["table_info"]
+    table_name, info = state["table_name"], state["table_info"]
+    sample_rows = state.get("sample_rows", [])
 
     features = extract_table_features(table_name, info)
-    hints    = derive_feature_hints(features, table_name)
+    scores = score_targets(features)
+    best_target, best_score, confidence_gap, ranked = choose_by_scores(scores)
 
-    print(
-        f"  [orchestrator] '{table_name}' → "
-        f"vector={hints['use_vector']} graph={hints['use_graph']} "
-        f"nested={hints['use_nested']} indexes={hints['needs_indexes']}"
-    )
+    if best_score >= 6 and confidence_gap >= 2:
+        print(f"  [orchestrator] heuristically routed '{table_name}' -> {best_target.upper()}")
+        return {
+            **state, "target_db": best_target,
+            "routing_reason": f"Heuristic routing selected {best_target} based on schema features.",
+            "strategy": {"target_db": best_target, "reasoning": "Heuristic routing.", "routing_scores": scores, "routing_features": features, "routing_method": "heuristic"}
+        }
 
-    return {
-        **state,
-        "target_db":       "surrealdb",
-        "routing_reason":  "All tables → SurrealDB; features decided per specialist agent.",
-        "feature_hints":   hints,
-        "routing_features": features,
-        # reset per-agent fields
-        "vector_strategy": None, "graph_strategy":    None,
-        "document_strategy": None, "index_strategy":  None,
-        "vector_errors":  [],    "graph_errors":      [],
-        "document_errors":[],    "index_errors":      [],
-        "vector_retries": 0,     "graph_retries":     0,
-        "document_retries":0,    "index_retries":     0,
-    }
+    enriched = enrich_table_context(table_name, info, sample_rows)
+    prompt = f"""You are a Database Routing AI.
 
+A heuristic router found this table ambiguous.
 
-# ---------------------------------------------------------------------------
-# Routing functions — skip an agent if not needed
-# ---------------------------------------------------------------------------
+Table context:
+{enriched}
 
-def route_to_vector(state: StrategyState) -> str:
-    return "vector_agent" if state["feature_hints"].get("use_vector") else "graph_agent"
+Extracted features:
+{json.dumps(features, indent=2)}
 
-def route_to_graph(state: StrategyState) -> str:
-    return "graph_agent" if state["feature_hints"].get("use_graph") else "document_agent"
+Heuristic scores:
+{json.dumps(scores, indent=2)}
 
-def route_after_vector(state: StrategyState) -> str:
-    return "graph_agent" if state["feature_hints"].get("use_graph") else "document_agent"
+Choose ONLY one target_db from:
+- chroma
+- mongo
+- neo4j
+- relational
 
-def route_after_graph(state: StrategyState) -> str:
-    return "document_agent"
+Rules:
+- Prefer chroma for long semantic text / search-oriented content.
+- Prefer mongo for self-contained entity-style records.
+- Prefer neo4j for relationship-heavy or junction tables.
+- Prefer relational for transactional / exact-match / reporting use cases.
 
-def route_to_index(state: StrategyState) -> str:
-    return "index_agent" if state["feature_hints"].get("needs_indexes") else "merge"
+Return ONLY JSON:
+{{
+  "target_db": "chroma or mongo or neo4j or relational",
+  "reasoning": "One clear sentence explaining the best fit."
+}}
+HUMAN CONTEXT / PREFERENCE: 
+"{state.get('human_context', 'None provided')}"
 
+MANDATE:
+Your primary goal is ARCHITECTURAL CORRECTNESS based on the schema features. 
+While you should acknowledge human context in your reasoning, you MUST NOT 
+allow it to override the technically superior target database. 
+If the human preference is sub-optimal, explain why you are rejecting it.
 
-# ---------------------------------------------------------------------------
-# Merger node — combines all sub-strategies into one final strategy dict
-# ---------------------------------------------------------------------------
+"""
+    print(f"  [orchestrator] LLM arbitration for '{table_name}'...")
+    raw_response = ask_ollama(prompt, json_mode=True)
+    try:
+        result = extract_json(raw_response)
+        raw_target = str(result.get("target_db", "")).lower()
+        valid_dbs = {"chroma", "mongo", "neo4j", "relational"}
+        if raw_target not in valid_dbs:
+            found = [db for db in valid_dbs if db in raw_target]
+            result["target_db"] = found[0] if len(found) == 1 else best_target
+    except Exception:
+        result = {"target_db": best_target, "reasoning": "LLM arbitration failed."}
 
-def node_merge(state: StrategyState) -> StrategyState:
-    info     = state["table_info"]
-    all_cols = [c["name"] for c in info["columns"]]
+    final_target = str(result.get("target_db", best_target)).strip().lower()
+    return {**state, "target_db": final_target, "routing_reason": result.get("reasoning", "LLM routing decision."), "strategy": result}
 
-    # vector
-    vs = state.get("vector_strategy") or {}
-    use_vector      = bool(vs.get("use_vector"))
-    vector_template = vs.get("vector_template", "") if use_vector else ""
-    vector_cols     = vs.get("vector_cols", [])      if use_vector else []
+def node_reflect(state: StrategyState) -> StrategyState:
+    return {**state, "retries": state["retries"] + 1}
 
-    # graph
-    gs        = state.get("graph_strategy") or {}
-    use_graph = bool(gs.get("use_graph"))
-    relations = gs.get("relations", []) if use_graph else []
+def node_accept(state: StrategyState) -> StrategyState:
+    final_strat = state.get("strategy") or {}
+    errors = state.get("errors", [])
+    if errors:
+        all_cols = [c["name"] for c in state["table_info"]["columns"]]
+        target_db = state.get("target_db", "chroma")
+        if target_db == "relational": final_strat = {"target_db": "relational", "preserve_as": "table", "used_columns": all_cols, "skipped_columns": [], "fallback_used": True}
+        elif target_db == "mongo": final_strat = {"target_db": "mongo", "fields": all_cols, "nested_fields": {}, "fallback_used": True}
+        elif target_db == "neo4j": final_strat = {"target_db": "neo4j", "used_columns": all_cols, "skipped_columns": [], "join_related": [fk["referred_table"] for fk in state["table_info"]["foreign_keys"]], "fallback_used": True}
+        else: final_strat = {"target_db": "chroma", "template": " | ".join(f"{col}: {{{col}}}" for col in all_cols), "used_columns": all_cols, "skipped_columns": [], "fallback_used": True}
+    else:
+        final_strat["target_db"] = state["target_db"]
+        final_strat["routing_reason"] = state.get("routing_reason", "N/A")
+        final_strat["fallback_used"] = False
+    return {**state, "final": final_strat}
 
-    # document
-    ds            = state.get("document_strategy") or {}
-    use_nested    = bool(ds.get("use_nested"))
-    nested_fields = ds.get("nested_fields", {}) if use_nested else {}
-    top_level     = ds.get("top_level_fields", all_cols) or all_cols
-
-    # index — agent returns [{col, unique}]; normalise to flat list + unique map
-    ix       = state.get("index_strategy") or {}
-    raw_idx  = ix.get("index_cols", [])
-    valid_col_names = {c["name"] for c in info["columns"]}
-    index_cols   = []
-    index_unique = {}
-    for entry in raw_idx:
-        if isinstance(entry, dict):
-            col = entry.get("col", "")
-            if col and col in valid_col_names:
-                index_cols.append(col)
-                index_unique[col] = bool(entry.get("unique", False))
-
-    reasoning = " | ".join(filter(None, [
-        vs.get("reasoning",""), gs.get("reasoning",""),
-        ds.get("reasoning",""), ix.get("reasoning","")
-    ]))
-
-    merged = {
-        "target_db":        "surrealdb",
-        "use_vector":       use_vector,
-        "vector_template":  vector_template,
-        "vector_cols":      vector_cols,
-        "use_graph":        use_graph,
-        "relations":        relations,
-        "use_nested":       use_nested,
-        "nested_fields":    nested_fields,
-        "top_level_fields": top_level,
-        "index_cols":       index_cols,
-        "index_unique":     index_unique,
-        "reasoning":        reasoning,
-        "fallback_used":    False,
-        "routing_reason":   state.get("routing_reason", ""),
-        "feature_hints":    state.get("feature_hints", {}),
-        "agent_errors": {
-            "vector":   state.get("vector_errors",   []),
-            "graph":    state.get("graph_errors",    []),
-            "document": state.get("document_errors", []),
-            "index":    state.get("index_errors",    []),
-        },
-    }
-
-    return {**state, "final": merged}
-
-
-# ---------------------------------------------------------------------------
-# Graph wiring
-# ---------------------------------------------------------------------------
+def route_to_specialist(state: StrategyState) -> str: return f"analyze_{state['target_db']}"
+def route_retry(state: StrategyState) -> str: return f"analyze_{state['target_db'].lower()}"
 
 def _build_graph() -> Any:
     g = StateGraph(StrategyState)
-
-    g.add_node("orchestrator",      node_orchestrator)
-
-    # specialist agents
-    g.add_node("vector_agent",      node_analyze_vector)
-    g.add_node("validate_vector",   node_validate_vector)
-    g.add_node("reflect_vector",    node_reflect_vector)
-
-    g.add_node("graph_agent",       node_analyze_graph)
-    g.add_node("validate_graph",    node_validate_graph)
-    g.add_node("reflect_graph",     node_reflect_graph)
-
-    g.add_node("document_agent",    node_analyze_document)
-    g.add_node("validate_document", node_validate_document)
-    g.add_node("reflect_document",  node_reflect_document)
-
-    g.add_node("index_agent",       node_analyze_index)
-    g.add_node("validate_index",    node_validate_index)
-    g.add_node("reflect_index",     node_reflect_index)
-
-    g.add_node("merge",             node_merge)
-
-    # entry
+    g.add_node("orchestrator", node_orchestrator)
+    g.add_node("analyze_chroma", node_analyze_vector)
+    g.add_node("validate_chroma", node_validate_vector)
+    g.add_node("analyze_mongo", node_analyze_document)
+    g.add_node("validate_mongo", node_validate_document)
+    g.add_node("analyze_neo4j", node_analyze_graph)
+    g.add_node("validate_neo4j", node_validate_graph)
+    g.add_node("analyze_relational", node_analyze_index)
+    g.add_node("validate_relational", node_validate_index)
+    g.add_node("reflect", node_reflect)
+    g.add_node("accept", node_accept)
     g.set_entry_point("orchestrator")
-
-    # orchestrator → first agent (vector if needed, else graph)
-    g.add_conditional_edges("orchestrator", route_to_vector,
-        {"vector_agent": "vector_agent", "graph_agent": "graph_agent"})
-
-    # vector loop → then graph
-    g.add_edge("vector_agent",    "validate_vector")
-    g.add_conditional_edges("validate_vector", route_vector,
-        {"accept": "after_vector", "reflect": "reflect_vector"})
-    g.add_edge("reflect_vector",  "vector_agent")
-    g.add_node("after_vector", lambda s: s)   # passthrough to allow conditional routing
-    g.add_conditional_edges("after_vector", route_after_vector,
-        {"graph_agent": "graph_agent", "document_agent": "document_agent"})
-
-    # graph loop → document
-    g.add_edge("graph_agent",     "validate_graph")
-    g.add_conditional_edges("validate_graph", route_graph,
-        {"accept": "document_agent", "reflect": "reflect_graph"})
-    g.add_edge("reflect_graph",   "graph_agent")
-
-    # document loop → index (if needed) else merge
-    g.add_edge("document_agent",    "validate_document")
-    g.add_conditional_edges("validate_document", route_document,
-        {"accept": "after_document", "reflect": "reflect_document"})
-    g.add_edge("reflect_document",  "document_agent")
-    g.add_node("after_document", lambda s: s)
-    g.add_conditional_edges("after_document", route_to_index,
-        {"index_agent": "index_agent", "merge": "merge"})
-
-    # index loop → merge
-    g.add_edge("index_agent",     "validate_index")
-    g.add_conditional_edges("validate_index", route_index,
-        {"accept": "merge", "reflect": "reflect_index"})
-    g.add_edge("reflect_index",   "index_agent")
-
-    g.add_edge("merge", END)
-
+    g.add_conditional_edges("orchestrator", route_to_specialist, {"analyze_chroma": "analyze_chroma", "analyze_mongo": "analyze_mongo", "analyze_neo4j": "analyze_neo4j", "analyze_relational": "analyze_relational"})
+    g.add_edge("analyze_chroma", "validate_chroma")
+    g.add_conditional_edges("validate_chroma", route_vector, {"accept": "accept", "reflect": "reflect"})
+    g.add_edge("analyze_mongo", "validate_mongo")
+    g.add_conditional_edges("validate_mongo", route_document, {"accept": "accept", "reflect": "reflect"})
+    g.add_edge("analyze_neo4j", "validate_neo4j")
+    g.add_conditional_edges("validate_neo4j", route_graph, {"accept": "accept", "reflect": "reflect"})
+    g.add_edge("analyze_relational", "validate_relational")
+    g.add_conditional_edges("validate_relational", route_index, {"accept": "accept", "reflect": "reflect"})
+    g.add_conditional_edges("reflect", route_retry)
+    g.add_edge("accept", END)
     return g.compile()
-
 
 _GRAPH = _build_graph()
 
-
-# ---------------------------------------------------------------------------
-# Public API — called by pipeline.py, unchanged interface
-# ---------------------------------------------------------------------------
-
-def plan_migration(
-    schema: dict[str, Any],
-    sample_rows_map: dict[str, list] | None = None,
-    human_context: str = "",
-) -> dict[str, dict]:
-    """
-    Run the multi-agent planning graph for every table.
-    Returns {table_name: final_strategy_dict} — no DB writes happen here.
-    """
-    strategies      = {}
+def plan_embeddings(schema: dict[str, Any], sample_rows_map: dict[str, list] = None, human_context: str = "") -> dict[str, dict]:
+    strategies = {}
     sample_rows_map = sample_rows_map or {}
-
     for table_name, table_info in schema.items():
         print(f"\nPlanning: {table_name}")
-        init: StrategyState = {
-            "table_name":      table_name,
-            "table_info":      table_info,
-            "all_tables":      list(schema.keys()),
-            "target_db":       None,
-            "routing_reason":  None,
-            "strategy":        None,
-            "errors":          [],
-            "retries":         0,
-            "final":           None,
-            "sample_rows":     sample_rows_map.get(table_name, []),
-            "human_context":   human_context,
-            "bias_test_mode":  False,
-            "feature_hints":   {},
-            "routing_features": {},
-            "vector_strategy": None, "graph_strategy":    None,
-            "document_strategy": None, "index_strategy":  None,
-            "vector_errors":  [],    "graph_errors":      [],
-            "document_errors":[],    "index_errors":      [],
-            "vector_retries": 0,     "graph_retries":     0,
-            "document_retries":0,    "index_retries":     0,
+        init_state: StrategyState = {
+            "table_name": table_name, "table_info": table_info, "all_tables": list(schema.keys()),
+            "target_db": None, "routing_reason": None, "strategy": None, "errors": [], "retries": 0,
+            "final": None, "sample_rows": sample_rows_map.get(table_name, []), "human_context": human_context,
         }
-        result = _GRAPH.invoke(init)
-        strategies[table_name] = result["final"]
-
+        strategies[table_name] = _GRAPH.invoke(init_state)["final"]
     return strategies
 
-
-def save_migration_manifest(strategies: dict, source_db: str) -> None:
+def save_migration_manifest(strategies: dict, source_db: str):
     manifest = {
-        "metadata": {
-            "timestamp":     time.strftime("%Y-%m-%d %H:%M:%S"),
-            "source_db":     source_db,
-            "target_engine": "surrealdb",
-            "total_tables":  len(strategies),
-        },
-        "migrations": [],
+        "metadata": {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "source_db": source_db, "total_tables": len(strategies)},
+        "migrations": []
     }
-
     for tname, strat in strategies.items():
-        features = []
-        if strat.get("use_vector"):  features.append("vector")
-        if strat.get("use_graph"):   features.append("graph")
-        if strat.get("use_nested"):  features.append("nested")
-        if strat.get("index_cols"):  features.append("indexes")
-
-        top         = strat.get("top_level_fields", [])
-        nested_flat = [c for ch in strat.get("nested_fields", {}).values() for c in ch]
-        retained    = list(dict.fromkeys(top + nested_flat))
-
         manifest["migrations"].append({
-            "table_name":       tname,
-            "target_engine":    "surrealdb",
-            "features":         features,
-            "retained_columns": retained,
-            "relations":        strat.get("relations", []),
-            "index_cols":       strat.get("index_cols", []),
-            "index_unique":     strat.get("index_unique", {}),
-            "fallback_used":    strat.get("fallback_used", False),
-            "agent_errors":     strat.get("agent_errors", {}),
+            "table_name": tname,
+            "target_engine": strat.get("target_db", "UNKNOWN").lower(),
+            "retained_columns": strat.get("used_columns", strat.get("fields", [])),
+            "dropped_columns": strat.get("skipped_columns", []),
+            "fallback_used": strat.get("fallback_used", False)
         })
-
     with open("migration_manifest.json", "w") as f:
         json.dump(manifest, f, indent=4)
-
-    print("\n[system] Migration manifest saved → migration_manifest.json")
+    print(f"\n[system] Migration Manifest generated: migration_manifest.json")
