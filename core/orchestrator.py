@@ -1,234 +1,323 @@
+"""
+orchestrator.py    LangGraph orchestrator for SurrealDB migration.
+
+Differences from the original polyglot orchestrator:
+  - The scoring step no longer picks ONE of four databases.
+    Instead it decides which SurrealDB features (use_vector, use_graph,
+    use_nested, index_cols) are likely to be needed.  This pre-fills
+    `feature_hints` in the state so the LLM agent has a warm start.
+  - There is only one specialist agent (agent_surrealdb) and one
+    validate node, so the graph is much simpler.
+  - `save_migration_manifest` now records features rather than target_engine.
+"""
+
+from __future__ import annotations
+
 import json
-import re
 import time
 from typing import Any
+
 from langgraph.graph import StateGraph, END
 
 from core.state import StrategyState
 from core.llm_utils import ask_ollama, extract_json, enrich_table_context
-from core.agent_chroma import node_analyze_chroma, node_validate_chroma, route_chroma_validation
-from core.agent_mongo import node_analyze_mongo, node_validate_mongo, route_mongo_validation
-from core.agent_neo4j import node_analyze_neo4j, node_validate_neo4j, route_neo4j_validation
-from core.agent_relational import (
-    node_analyze_relational,
-    node_validate_relational,
-    route_relational_validation,
+from core.agent_surrealdb import (
+    node_analyze_surrealdb,
+    node_validate_surrealdb,
+    route_surrealdb_validation,
 )
 
-def is_text_type(col_type: str) -> bool:
+# ---------------------------------------------------------------------------
+# Schema feature extraction  (same helpers as original, kept intact)
+# ---------------------------------------------------------------------------
+
+def _is_text(col_type: str) -> bool:
     t = str(col_type).upper()
     return any(x in t for x in ["TEXT", "CHAR", "VARCHAR", "CLOB"])
 
-def is_numeric_type(col_type: str) -> bool:
+def _is_numeric(col_type: str) -> bool:
     t = str(col_type).upper()
     return any(x in t for x in ["INT", "FLOAT", "REAL", "DOUBLE", "DECIMAL", "NUMERIC"])
 
-def is_temporal_type(col_type: str) -> bool:
+def _is_temporal(col_type: str) -> bool:
     t = str(col_type).upper()
     return any(x in t for x in ["DATE", "TIME", "TIMESTAMP"])
 
-def extract_table_features(table_name: str, info: dict) -> dict:
-    cols = info.get("columns", [])
-    fks = info.get("foreign_keys", [])
-    pks = set(info.get("primary_keys", []))
 
-    col_names = [c["name"].lower() for c in cols]
+def extract_table_features(table_name: str, info: dict) -> dict:
+    cols   = info.get("columns", [])
+    fks    = info.get("foreign_keys", [])
+    pks    = set(info.get("primary_keys", []))
+
+    col_names   = [c["name"].lower() for c in cols]
     table_lower = table_name.lower()
 
-    text_cols = [c["name"] for c in cols if is_text_type(c["type"])]
-    numeric_cols = [c["name"] for c in cols if is_numeric_type(c["type"])]
-    temporal_cols = [c["name"] for c in cols if is_temporal_type(c["type"])]
-    fk_cols = [fk["columns"][0] for fk in fks if fk.get("columns")]
+    text_cols    = [c["name"] for c in cols if _is_text(c["type"])]
+    numeric_cols = [c["name"] for c in cols if _is_numeric(c["type"])]
+    temporal_cols = [c["name"] for c in cols if _is_temporal(c["type"])]
+    fk_cols      = [fk["columns"][0] for fk in fks if fk.get("columns")]
 
-    semantic_keywords = ["content", "description", "body", "text", "summary", "review", "abstract", "note", "article", "comment", "details", "bio"]
-    transactional_keywords = ["status", "amount", "price", "total", "balance", "created_at", "updated_at", "timestamp", "priority", "deadline", "quantity"]
-    entity_keywords = ["profile", "product", "catalog", "config", "setting", "metadata", "country", "office", "vehicle", "event"]
+    semantic_kw      = ["content", "description", "body", "text", "summary", "review",
+                        "abstract", "note", "article", "comment", "details", "bio", "title"]
+    transactional_kw = ["status", "amount", "price", "total", "balance", "created_at",
+                        "updated_at", "timestamp", "priority", "deadline", "quantity"]
+    entity_kw        = ["profile", "product", "catalog", "config", "setting", "metadata",
+                        "country", "office", "vehicle", "event", "department"]
 
-    has_semantic_cols = any(any(k in c for k in semantic_keywords) for c in col_names)
-    has_transactional_cols = any(any(k in c for k in transactional_keywords) for c in col_names)
-    entity_like_name = any(k in table_lower for k in entity_keywords)
-
-    is_junction = (len(fk_cols) >= 2 and len(cols) <= 6)
+    has_semantic      = any(any(k in c for k in semantic_kw) for c in col_names)
+    has_transactional = any(any(k in c for k in transactional_kw) for c in col_names)
+    entity_like       = any(k in table_lower for k in entity_kw)
+    is_junction       = (len(fk_cols) >= 2 and len(cols) <= 6)
 
     return {
-        "table_name": table_name, "num_columns": len(cols), "num_text_cols": len(text_cols),
-        "num_numeric_cols": len(numeric_cols), "num_temporal_cols": len(temporal_cols),
-        "num_fk_cols": len(fk_cols), "has_semantic_cols": has_semantic_cols,
-        "has_transactional_cols": has_transactional_cols, "entity_like_name": entity_like_name,
-        "is_junction": is_junction, "text_cols": text_cols, "fk_cols": fk_cols, "col_names": col_names,
+        "table_name":          table_name,
+        "num_columns":         len(cols),
+        "num_text_cols":       len(text_cols),
+        "num_numeric_cols":    len(numeric_cols),
+        "num_temporal_cols":   len(temporal_cols),
+        "num_fk_cols":         len(fk_cols),
+        "has_semantic_cols":   has_semantic,
+        "has_transactional_cols": has_transactional,
+        "entity_like_name":    entity_like,
+        "is_junction":         is_junction,
+        "text_cols":           text_cols,
+        "fk_cols":             fk_cols,
+        "col_names":           col_names,
     }
 
-def score_targets(features: dict) -> dict:
-    scores = {"chroma": 0, "mongo": 0, "neo4j": 0, "relational": 0}
-    if features["has_semantic_cols"]: scores["chroma"] += 4
-    if features["num_text_cols"] >= 2: scores["chroma"] += 2
-    if any(k in features["table_name"].lower() for k in ["review", "paper", "article", "blog", "note", "contract", "course", "knowledge"]): scores["chroma"] += 4
-    if features["num_fk_cols"] == 0: scores["mongo"] += 3
-    if features["entity_like_name"]: scores["mongo"] += 4
-    if features["num_text_cols"] >= 1 and features["num_fk_cols"] <= 1: scores["mongo"] += 1
-    if features["num_fk_cols"] >= 2: scores["neo4j"] += 5
-    if features["is_junction"]: scores["neo4j"] += 5
-    if any(k in features["table_name"].lower() for k in ["map", "link", "relation", "association", "membership", "projects"]): scores["neo4j"] += 3
-    if features["has_transactional_cols"]: scores["relational"] += 4
-    if features["num_numeric_cols"] >= 2: scores["relational"] += 2
-    if features["num_temporal_cols"] >= 1: scores["relational"] += 2
-    return scores
 
-def choose_by_scores(scores: dict):
-    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    best, second = ranked[0], ranked[1]
-    confidence_gap = best[1] - second[1]
-    return best[0], best[1], confidence_gap, ranked
+def derive_feature_hints(features: dict) -> dict:
+    """
+    Derive heuristic feature hints for SurrealDB from schema features.
+    These are passed to the LLM as a warm start – the LLM can override them.
+    """
+    return {
+        "use_vector": (
+            features["has_semantic_cols"]
+            or features["num_text_cols"] >= 2
+            or any(k in features["table_name"].lower()
+                   for k in ["review", "paper", "article", "blog", "note",
+                              "contract", "course", "knowledge"])
+        ),
+        "use_graph": (
+            features["num_fk_cols"] >= 1
+        ),
+        "use_nested": (
+            features["entity_like_name"]
+            or (features["num_text_cols"] >= 2 and features["num_fk_cols"] <= 1)
+        ),
+        "needs_indexes": (
+            features["has_transactional_cols"]
+            or features["num_numeric_cols"] >= 2
+            or features["num_temporal_cols"] >= 1
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator node
+# ---------------------------------------------------------------------------
 
 def node_orchestrator(state: StrategyState) -> StrategyState:
-    table_name, info = state["table_name"], state["table_info"]
+    table_name  = state["table_name"]
+    info        = state["table_info"]
     sample_rows = state.get("sample_rows", [])
 
-    features = extract_table_features(table_name, info)
-    scores = score_targets(features)
-    best_target, best_score, confidence_gap, ranked = choose_by_scores(scores)
+    features      = extract_table_features(table_name, info)
+    feature_hints = derive_feature_hints(features)
 
-    if best_score >= 6 and confidence_gap >= 2:
-        print(f"  [orchestrator] heuristically routed '{table_name}' -> {best_target.upper()}")
-        return {
-            **state, "target_db": best_target,
-            "routing_reason": f"Heuristic routing selected {best_target} based on schema features.",
-            "strategy": {"target_db": best_target, "reasoning": "Heuristic routing.", "routing_scores": scores, "routing_features": features, "routing_method": "heuristic"}
-        }
+    print(
+        f"  [orchestrator] '{table_name}' hints → "
+        f"vector={feature_hints['use_vector']} "
+        f"graph={feature_hints['use_graph']} "
+        f"nested={feature_hints['use_nested']} "
+        f"indexes={feature_hints['needs_indexes']}"
+    )
 
-    enriched = enrich_table_context(table_name, info, sample_rows)
-    prompt = f"""You are a Database Routing AI.
+    return {
+        **state,
+        "target_db":     "surrealdb",
+        "routing_reason": "All tables go to SurrealDB; features are decided per-table.",
+        "feature_hints":  feature_hints,
+        "routing_features": features,
+    }
 
-A heuristic router found this table ambiguous.
 
-Table context:
-{enriched}
-
-Extracted features:
-{json.dumps(features, indent=2)}
-
-Heuristic scores:
-{json.dumps(scores, indent=2)}
-
-Choose ONLY one target_db from:
-- chroma
-- mongo
-- neo4j
-- relational
-
-Rules:
-- Prefer chroma for long semantic text / search-oriented content.
-- Prefer mongo for self-contained entity-style records.
-- Prefer neo4j for relationship-heavy or junction tables.
-- Prefer relational for transactional / exact-match / reporting use cases.
-
-Return ONLY JSON:
-{{
-  "target_db": "chroma or mongo or neo4j or relational",
-  "reasoning": "One clear sentence explaining the best fit."
-}}
-HUMAN CONTEXT / PREFERENCE: 
-"{state.get('human_context', 'None provided')}"
-
-MANDATE:
-Your primary goal is ARCHITECTURAL CORRECTNESS based on the schema features. 
-While you should acknowledge human context in your reasoning, you MUST NOT 
-allow it to override the technically superior target database. 
-If the human preference is sub-optimal, explain why you are rejecting it.
-
-"""
-    print(f"  [orchestrator] LLM arbitration for '{table_name}'...")
-    raw_response = ask_ollama(prompt, json_mode=True)
-    try:
-        result = extract_json(raw_response)
-        raw_target = str(result.get("target_db", "")).lower()
-        valid_dbs = {"chroma", "mongo", "neo4j", "relational"}
-        if raw_target not in valid_dbs:
-            found = [db for db in valid_dbs if db in raw_target]
-            result["target_db"] = found[0] if len(found) == 1 else best_target
-    except Exception:
-        result = {"target_db": best_target, "reasoning": "LLM arbitration failed."}
-
-    final_target = str(result.get("target_db", best_target)).strip().lower()
-    return {**state, "target_db": final_target, "routing_reason": result.get("reasoning", "LLM routing decision."), "strategy": result}
+# ---------------------------------------------------------------------------
+# Reflect / Accept nodes  (identical logic to original)
+# ---------------------------------------------------------------------------
 
 def node_reflect(state: StrategyState) -> StrategyState:
     return {**state, "retries": state["retries"] + 1}
 
+
 def node_accept(state: StrategyState) -> StrategyState:
     final_strat = state.get("strategy") or {}
-    errors = state.get("errors", [])
+    errors      = state.get("errors", [])
+
     if errors:
+        # Fallback: safe minimal strategy so the pipeline doesn't crash
         all_cols = [c["name"] for c in state["table_info"]["columns"]]
-        target_db = state.get("target_db", "chroma")
-        if target_db == "relational": final_strat = {"target_db": "relational", "preserve_as": "table", "used_columns": all_cols, "skipped_columns": [], "fallback_used": True}
-        elif target_db == "mongo": final_strat = {"target_db": "mongo", "fields": all_cols, "nested_fields": {}, "fallback_used": True}
-        elif target_db == "neo4j": final_strat = {"target_db": "neo4j", "used_columns": all_cols, "skipped_columns": [], "join_related": [fk["referred_table"] for fk in state["table_info"]["foreign_keys"]], "fallback_used": True}
-        else: final_strat = {"target_db": "chroma", "template": " | ".join(f"{col}: {{{col}}}" for col in all_cols), "used_columns": all_cols, "skipped_columns": [], "fallback_used": True}
+        fk_rels  = [
+            {
+                "label":    f"{state['table_name'].upper()}_TO_{fk['referred_table'].upper()}",
+                "from_col": fk["columns"][0] if fk.get("columns") else "",
+                "to_table": fk["referred_table"],
+                "to_col":   fk["referred_columns"][0] if fk.get("referred_columns") else "id",
+                "edge_props": [],
+            }
+            for fk in state["table_info"].get("foreign_keys", [])
+            if fk.get("columns")
+        ]
+        final_strat = {
+            "use_vector":        False,
+            "vector_template":   "",
+            "vector_cols":       [],
+            "use_graph":         len(fk_rels) > 0,
+            "relations":         fk_rels,
+            "use_nested":        False,
+            "nested_fields":     {},
+            "top_level_fields":  all_cols,
+            "index_cols":        [],
+            "reasoning":         "Fallback strategy — LLM validation failed.",
+            "fallback_used":     True,
+        }
     else:
-        final_strat["target_db"] = state["target_db"]
-        final_strat["routing_reason"] = state.get("routing_reason", "N/A")
-        final_strat["fallback_used"] = False
+        final_strat["target_db"]        = "surrealdb"
+        final_strat["routing_reason"]   = state.get("routing_reason", "N/A")
+        final_strat["fallback_used"]    = False
+        final_strat["feature_hints"]    = state.get("feature_hints", {})
+        final_strat["routing_features"] = state.get("routing_features", {})
+
     return {**state, "final": final_strat}
 
-def route_to_specialist(state: StrategyState) -> str: return f"analyze_{state['target_db']}"
-def route_retry(state: StrategyState) -> str: return f"analyze_{state['target_db'].lower()}"
+
+# ---------------------------------------------------------------------------
+# Graph wiring
+# ---------------------------------------------------------------------------
 
 def _build_graph() -> Any:
     g = StateGraph(StrategyState)
-    g.add_node("orchestrator", node_orchestrator)
-    g.add_node("analyze_chroma", node_analyze_chroma)
-    g.add_node("validate_chroma", node_validate_chroma)
-    g.add_node("analyze_mongo", node_analyze_mongo)
-    g.add_node("validate_mongo", node_validate_mongo)
-    g.add_node("analyze_neo4j", node_analyze_neo4j)
-    g.add_node("validate_neo4j", node_validate_neo4j)
-    g.add_node("analyze_relational", node_analyze_relational)
-    g.add_node("validate_relational", node_validate_relational)
-    g.add_node("reflect", node_reflect)
-    g.add_node("accept", node_accept)
+
+    g.add_node("orchestrator",       node_orchestrator)
+    g.add_node("analyze_surrealdb",  node_analyze_surrealdb)
+    g.add_node("validate_surrealdb", node_validate_surrealdb)
+    g.add_node("reflect",            node_reflect)
+    g.add_node("accept",             node_accept)
+
     g.set_entry_point("orchestrator")
-    g.add_conditional_edges("orchestrator", route_to_specialist, {"analyze_chroma": "analyze_chroma", "analyze_mongo": "analyze_mongo", "analyze_neo4j": "analyze_neo4j", "analyze_relational": "analyze_relational"})
-    g.add_edge("analyze_chroma", "validate_chroma")
-    g.add_conditional_edges("validate_chroma", route_chroma_validation, {"accept": "accept", "reflect": "reflect"})
-    g.add_edge("analyze_mongo", "validate_mongo")
-    g.add_conditional_edges("validate_mongo", route_mongo_validation, {"accept": "accept", "reflect": "reflect"})
-    g.add_edge("analyze_neo4j", "validate_neo4j")
-    g.add_conditional_edges("validate_neo4j", route_neo4j_validation, {"accept": "accept", "reflect": "reflect"})
-    g.add_edge("analyze_relational", "validate_relational")
-    g.add_conditional_edges("validate_relational", route_relational_validation, {"accept": "accept", "reflect": "reflect"})
-    g.add_conditional_edges("reflect", route_retry)
+    g.add_edge("orchestrator", "analyze_surrealdb")
+    g.add_edge("analyze_surrealdb", "validate_surrealdb")
+    g.add_conditional_edges(
+        "validate_surrealdb",
+        route_surrealdb_validation,
+        {"accept": "accept", "reflect": "reflect"},
+    )
+    g.add_edge("reflect", "analyze_surrealdb")
     g.add_edge("accept", END)
+
     return g.compile()
+
 
 _GRAPH = _build_graph()
 
-def plan_embeddings(schema: dict[str, Any], sample_rows_map: dict[str, list] = None, human_context: str = "") -> dict[str, dict]:
-    strategies = {}
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def plan_migration(
+    schema: dict[str, Any],
+    sample_rows_map: dict[str, list] | None = None,
+    human_context: str = "",
+) -> dict[str, dict]:
+    """
+    Run the LangGraph orchestrator for every table in *schema*.
+
+    Parameters
+    ----------
+    schema          : output of introspect_schema()
+    sample_rows_map : {table_name: [row_dicts]}  –  optional, improves LLM reasoning
+    human_context   : free-text expert advice passed to the LLM
+
+    Returns
+    -------
+    {table_name: final_strategy_dict}
+    """
+    strategies      = {}
     sample_rows_map = sample_rows_map or {}
+
     for table_name, table_info in schema.items():
         print(f"\nPlanning: {table_name}")
         init_state: StrategyState = {
-            "table_name": table_name, "table_info": table_info, "all_tables": list(schema.keys()),
-            "target_db": None, "routing_reason": None, "strategy": None, "errors": [], "retries": 0,
-            "final": None, "sample_rows": sample_rows_map.get(table_name, []), "human_context": human_context,
+            "table_name":     table_name,
+            "table_info":     table_info,
+            "all_tables":     list(schema.keys()),
+            "target_db":      None,
+            "routing_reason": None,
+            "strategy":       None,
+            "errors":         [],
+            "retries":        0,
+            "final":          None,
+            "sample_rows":    sample_rows_map.get(table_name, []),
+            "human_context":  human_context,
+            "bias_test_mode": False,
+            # SurrealDB-specific fields (populated by orchestrator node)
+            "feature_hints":      {},
+            "routing_features":   {},
         }
-        strategies[table_name] = _GRAPH.invoke(init_state)["final"]
+        result = _GRAPH.invoke(init_state)
+        strategies[table_name] = result["final"]
+
     return strategies
 
-def save_migration_manifest(strategies: dict, source_db: str):
+
+def save_migration_manifest(strategies: dict, source_db: str) -> None:
+    """
+    Write migration_manifest.json.
+
+    The manifest now records:
+      - target_engine: always "surrealdb"
+      - features: list of activated SurrealDB capabilities per table
+      - retained_columns / dropped_columns: same as before for audit
+    """
     manifest = {
-        "metadata": {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "source_db": source_db, "total_tables": len(strategies)},
-        "migrations": []
+        "metadata": {
+            "timestamp":    time.strftime("%Y-%m-%d %H:%M:%S"),
+            "source_db":    source_db,
+            "target_engine": "surrealdb",
+            "total_tables": len(strategies),
+        },
+        "migrations": [],
     }
+
     for tname, strat in strategies.items():
+        features_active = []
+        if strat.get("use_vector"):  features_active.append("vector")
+        if strat.get("use_graph"):   features_active.append("graph")
+        if strat.get("use_nested"):  features_active.append("nested")
+        if strat.get("index_cols"):  features_active.append("indexes")
+
+        all_cols    = strat.get("top_level_fields", [])
+        nested_flat = [
+            c
+            for children in strat.get("nested_fields", {}).values()
+            for c in children
+        ]
+        retained = list(dict.fromkeys(all_cols + nested_flat))  # dedup, order-preserving
+
         manifest["migrations"].append({
-            "table_name": tname,
-            "target_engine": strat.get("target_db", "UNKNOWN").lower(),
-            "retained_columns": strat.get("used_columns", strat.get("fields", [])),
-            "dropped_columns": strat.get("skipped_columns", []),
-            "fallback_used": strat.get("fallback_used", False)
+            "table_name":       tname,
+            "target_engine":    "surrealdb",
+            "features":         features_active,
+            "retained_columns": retained,
+            "dropped_columns":  strat.get("skipped_columns", []),
+            "relations":        strat.get("relations", []),
+            "index_cols":       strat.get("index_cols", []),
+            "fallback_used":    strat.get("fallback_used", False),
         })
+
     with open("migration_manifest.json", "w") as f:
         json.dump(manifest, f, indent=4)
-    print(f"\n[system] Migration Manifest generated: migration_manifest.json")
+
+    print("\n[system] Migration manifest saved → migration_manifest.json")

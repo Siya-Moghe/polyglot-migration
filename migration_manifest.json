@@ -1,66 +1,126 @@
 {
     "metadata": {
-        "timestamp": "2026-04-10 13:58:28",
+        "timestamp": "2026-04-21 12:42:38",
         "source_db": "sqlite:///enterprise_system.db",
+        "target_engine": "surrealdb",
         "total_tables": 6
     },
     "migrations": [
         {
             "table_name": "departments",
-            "target_engine": "mongo",
-            "retained_columns": [
-                "name",
-                "location",
-                "cost_center"
+            "target_engine": "surrealdb",
+            "features": [
+                "vector",
+                "indexes"
             ],
-            "dropped_columns": [
+            "retained_columns": [
+                "id",
+                "name",
+                "cost_center",
+                "location"
+            ],
+            "dropped_columns": [],
+            "relations": [],
+            "index_cols": [
                 "id"
             ],
             "fallback_used": false
         },
         {
             "table_name": "employee_projects",
-            "target_engine": "neo4j",
+            "target_engine": "surrealdb",
+            "features": [
+                "graph"
+            ],
             "retained_columns": [
                 "emp_id",
                 "proj_id",
                 "allocation_percentage"
             ],
             "dropped_columns": [],
+            "relations": [
+                {
+                    "label": "WORKS_ON",
+                    "from_col": "emp_id",
+                    "to_table": "projects",
+                    "to_col": "id",
+                    "edge_props": [
+                        "allocation_percentage"
+                    ]
+                }
+            ],
+            "index_cols": [],
             "fallback_used": false
         },
         {
             "table_name": "employees",
-            "target_engine": "chroma",
+            "target_engine": "surrealdb",
+            "features": [
+                "vector",
+                "graph",
+                "nested",
+                "indexes"
+            ],
             "retained_columns": [
+                "id",
                 "name",
                 "role",
                 "dept_id",
                 "email"
             ],
-            "dropped_columns": [
+            "dropped_columns": [],
+            "relations": [
+                {
+                    "label": "BELONGS_TO",
+                    "from_col": "dept_id",
+                    "to_table": "departments",
+                    "to_col": "id",
+                    "edge_props": []
+                }
+            ],
+            "index_cols": [
                 "id",
-                "dept_id"
+                "role"
             ],
             "fallback_used": false
         },
         {
             "table_name": "knowledge_base",
-            "target_engine": "chroma",
+            "target_engine": "surrealdb",
+            "features": [
+                "vector",
+                "graph",
+                "indexes"
+            ],
             "retained_columns": [
+                "id",
                 "title",
                 "full_content",
-                "tags"
-            ],
-            "dropped_columns": [
-                "id",
+                "tags",
                 "author_id"
+            ],
+            "dropped_columns": [],
+            "relations": [
+                {
+                    "label": "AUTHORED_BY",
+                    "from_col": "author_id",
+                    "to_table": "employees",
+                    "to_col": "id",
+                    "edge_props": []
+                }
+            ],
+            "index_cols": [
+                "id"
             ],
             "fallback_used": false
         },
         {
             "table_name": "projects",
-            "target_engine": "relational",
+            "target_engine": "surrealdb",
+            "features": [
+                "vector",
+                "indexes"
+            ],
             "retained_columns": [
                 "id",
                 "project_name",
@@ -68,19 +128,41 @@
                 "deadline"
             ],
             "dropped_columns": [],
+            "relations": [],
+            "index_cols": [
+                "id"
+            ],
             "fallback_used": false
         },
         {
             "table_name": "support_tickets",
-            "target_engine": "chroma",
+            "target_engine": "surrealdb",
+            "features": [
+                "vector",
+                "graph",
+                "indexes"
+            ],
             "retained_columns": [
+                "id",
+                "requester_id",
                 "issue_summary",
                 "status",
                 "priority"
             ],
-            "dropped_columns": [
+            "dropped_columns": [],
+            "relations": [
+                {
+                    "label": "REQUESTED_BY",
+                    "from_col": "requester_id",
+                    "to_table": "employees",
+                    "to_col": "id",
+                    "edge_props": []
+                }
+            ],
+            "index_cols": [
                 "id",
-                "requester_id"
+                "status",
+                "priority"
             ],
             "fallback_used": false
         }
