@@ -4,7 +4,7 @@ import requests
 from typing import Any
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llama3.2:1b"   # upgraded from phi3:mini
+MODEL = "llama3.2:3b"   # upgraded from phi3:mini
 MAX_RETRIES = 3
 
 

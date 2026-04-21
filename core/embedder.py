@@ -11,7 +11,7 @@ from urllib.parse import quote_plus
 from core.introspect import fetch_rows, fetch_lookup, fetch_rows_in_batches
 
 
-MYSQL_PASSWORD = quote_plus("16211402319")
+MYSQL_PASSWORD = quote_plus("Siya123@root")
 MYSQL_TARGET_URL = f"mysql+pymysql://root:{MYSQL_PASSWORD}@localhost:3306/polyglot_target"
 
 
@@ -400,6 +400,26 @@ def _map_sqlalchemy_type(col_type: str):
         return String(255)
 
 
+
+from sqlalchemy import create_engine, text
+
+def ensure_mysql_database(mysql_target_url: str):
+    """
+    Ensure the target MySQL database exists.
+    """
+    # Strip database name from URL
+    base_url = mysql_target_url.rsplit("/", 1)[0]
+
+    # Extract DB name
+    db_name = mysql_target_url.rsplit("/", 1)[-1]
+
+    engine = create_engine(base_url)
+
+    with engine.connect() as conn:
+        conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{db_name}`"))
+        print(f"[MySQL] Ensured database '{db_name}' exists.")
+
+
 def export_to_relational(
     table_name: str,
     strategy: Dict[str, Any],
@@ -408,6 +428,7 @@ def export_to_relational(
     mysql_target_url: str = MYSQL_TARGET_URL
 ) -> int:
     print(f"\n[Relational] Exporting table: {table_name} (Using Batch Streaming & PII Masking)")
+    ensure_mysql_database(mysql_target_url)
 
     if table_name not in schema:
         raise ValueError(f"Schema info missing for table '{table_name}'")

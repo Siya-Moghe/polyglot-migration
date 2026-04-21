@@ -1,0 +1,88 @@
+{
+    "metadata": {
+        "timestamp": "2026-04-10 13:58:28",
+        "source_db": "sqlite:///enterprise_system.db",
+        "total_tables": 6
+    },
+    "migrations": [
+        {
+            "table_name": "departments",
+            "target_engine": "mongo",
+            "retained_columns": [
+                "name",
+                "location",
+                "cost_center"
+            ],
+            "dropped_columns": [
+                "id"
+            ],
+            "fallback_used": false
+        },
+        {
+            "table_name": "employee_projects",
+            "target_engine": "neo4j",
+            "retained_columns": [
+                "emp_id",
+                "proj_id",
+                "allocation_percentage"
+            ],
+            "dropped_columns": [],
+            "fallback_used": false
+        },
+        {
+            "table_name": "employees",
+            "target_engine": "chroma",
+            "retained_columns": [
+                "name",
+                "role",
+                "dept_id",
+                "email"
+            ],
+            "dropped_columns": [
+                "id",
+                "dept_id"
+            ],
+            "fallback_used": false
+        },
+        {
+            "table_name": "knowledge_base",
+            "target_engine": "chroma",
+            "retained_columns": [
+                "title",
+                "full_content",
+                "tags"
+            ],
+            "dropped_columns": [
+                "id",
+                "author_id"
+            ],
+            "fallback_used": false
+        },
+        {
+            "table_name": "projects",
+            "target_engine": "relational",
+            "retained_columns": [
+                "id",
+                "project_name",
+                "objective",
+                "deadline"
+            ],
+            "dropped_columns": [],
+            "fallback_used": false
+        },
+        {
+            "table_name": "support_tickets",
+            "target_engine": "chroma",
+            "retained_columns": [
+                "issue_summary",
+                "status",
+                "priority"
+            ],
+            "dropped_columns": [
+                "id",
+                "requester_id"
+            ],
+            "fallback_used": false
+        }
+    ]
+}
