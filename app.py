@@ -3,7 +3,7 @@ import pandas as pd
 import copy
 from core.introspect import introspect_schema
 from core.orchestrator import plan_embeddings
-from core.embedder import embed_and_store
+from core.agents_old.embedder import embed_and_store
 
 st.set_page_config(page_title="Polyglot Migration Lab", layout="wide")
 

@@ -5,7 +5,7 @@ from mcp.server.fastmcp import FastMCP
 from create_complex_db import create_db
 from core.introspect import introspect_schema
 from core.orchestrator import plan_embeddings
-from core.embedder import (
+from core.agents_old.embedder import (
     export_to_chroma,
     export_to_mongo,
     export_to_neo4j,

@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "timestamp": "2026-04-21 12:42:38",
+        "timestamp": "2026-04-21 22:50:16",
         "source_db": "sqlite:///enterprise_system.db",
         "target_engine": "surrealdb",
         "total_tables": 6
@@ -11,7 +11,7 @@
             "target_engine": "surrealdb",
             "features": [
                 "vector",
-                "indexes"
+                "nested"
             ],
             "retained_columns": [
                 "id",
@@ -19,28 +19,32 @@
                 "cost_center",
                 "location"
             ],
-            "dropped_columns": [],
             "relations": [],
-            "index_cols": [
-                "id"
-            ],
-            "fallback_used": false
+            "index_cols": [],
+            "index_unique": {},
+            "fallback_used": false,
+            "agent_errors": {
+                "vector": [],
+                "graph": [],
+                "document": [],
+                "index": []
+            }
         },
         {
             "table_name": "employee_projects",
             "target_engine": "surrealdb",
             "features": [
-                "graph"
+                "graph",
+                "indexes"
             ],
             "retained_columns": [
                 "emp_id",
                 "proj_id",
                 "allocation_percentage"
             ],
-            "dropped_columns": [],
             "relations": [
                 {
-                    "label": "WORKS_ON",
+                    "label": "BELONGS_TO",
                     "from_col": "emp_id",
                     "to_table": "projects",
                     "to_col": "id",
@@ -49,8 +53,21 @@
                     ]
                 }
             ],
-            "index_cols": [],
-            "fallback_used": false
+            "index_cols": [
+                "emp_id",
+                "proj_id"
+            ],
+            "index_unique": {
+                "emp_id": true,
+                "proj_id": true
+            },
+            "fallback_used": false,
+            "agent_errors": {
+                "vector": [],
+                "graph": [],
+                "document": [],
+                "index": []
+            }
         },
         {
             "table_name": "employees",
@@ -63,26 +80,37 @@
             ],
             "retained_columns": [
                 "id",
-                "name",
                 "role",
                 "dept_id",
-                "email"
+                "email",
+                "name"
             ],
-            "dropped_columns": [],
             "relations": [
                 {
                     "label": "BELONGS_TO",
                     "from_col": "dept_id",
                     "to_table": "departments",
                     "to_col": "id",
-                    "edge_props": []
+                    "edge_props": [
+                        "role"
+                    ]
                 }
             ],
             "index_cols": [
                 "id",
-                "role"
+                "dept_id"
             ],
-            "fallback_used": false
+            "index_unique": {
+                "id": true,
+                "dept_id": true
+            },
+            "fallback_used": false,
+            "agent_errors": {
+                "vector": [],
+                "graph": [],
+                "document": [],
+                "index": []
+            }
         },
         {
             "table_name": "knowledge_base",
@@ -90,35 +118,49 @@
             "features": [
                 "vector",
                 "graph",
+                "nested",
                 "indexes"
             ],
             "retained_columns": [
                 "id",
-                "title",
                 "full_content",
-                "tags",
-                "author_id"
+                "author_id",
+                "title",
+                "tags"
             ],
-            "dropped_columns": [],
             "relations": [
                 {
-                    "label": "AUTHORED_BY",
+                    "label": "BELONGS_TO",
                     "from_col": "author_id",
                     "to_table": "employees",
                     "to_col": "id",
-                    "edge_props": []
+                    "edge_props": [
+                        "tags"
+                    ]
                 }
             ],
             "index_cols": [
-                "id"
+                "id",
+                "author_id"
             ],
-            "fallback_used": false
+            "index_unique": {
+                "id": true,
+                "author_id": false
+            },
+            "fallback_used": false,
+            "agent_errors": {
+                "vector": [],
+                "graph": [],
+                "document": [],
+                "index": []
+            }
         },
         {
             "table_name": "projects",
             "target_engine": "surrealdb",
             "features": [
                 "vector",
+                "nested",
                 "indexes"
             ],
             "retained_columns": [
@@ -127,12 +169,26 @@
                 "objective",
                 "deadline"
             ],
-            "dropped_columns": [],
             "relations": [],
             "index_cols": [
-                "id"
+                "id",
+                "project_name",
+                "objective",
+                "deadline"
             ],
-            "fallback_used": false
+            "index_unique": {
+                "id": true,
+                "project_name": false,
+                "objective": false,
+                "deadline": false
+            },
+            "fallback_used": false,
+            "agent_errors": {
+                "vector": [],
+                "graph": [],
+                "document": [],
+                "index": []
+            }
         },
         {
             "table_name": "support_tickets",
@@ -140,6 +196,7 @@
             "features": [
                 "vector",
                 "graph",
+                "nested",
                 "indexes"
             ],
             "retained_columns": [
@@ -149,22 +206,29 @@
                 "status",
                 "priority"
             ],
-            "dropped_columns": [],
             "relations": [
                 {
-                    "label": "REQUESTED_BY",
+                    "label": "BELONGS_TO",
                     "from_col": "requester_id",
                     "to_table": "employees",
-                    "to_col": "id",
-                    "edge_props": []
+                    "to_col": "id"
                 }
             ],
             "index_cols": [
                 "id",
-                "status",
-                "priority"
+                "requester_id"
             ],
-            "fallback_used": false
+            "index_unique": {
+                "id": true,
+                "requester_id": false
+            },
+            "fallback_used": false,
+            "agent_errors": {
+                "vector": [],
+                "graph": [],
+                "document": [],
+                "index": []
+            }
         }
     ]
 }
