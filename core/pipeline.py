@@ -20,7 +20,7 @@ import argparse
 import time
 
 from core.introspect import introspect_schema, fetch_rows
-from core.orchestrator import plan_migration, save_migration_manifest
+from core.orchestrator import plan_embeddings, save_migration_manifest
 from core.embedder_surrealdb import embed_and_store
 
 
@@ -72,7 +72,7 @@ def run_pipeline(
     print("\nSTAGE 2 — LangGraph SurrealDB Orchestrator")
     print("-" * 40)
 
-    strategies = plan_migration(schema, sample_rows_map=sample_rows_map, human_context=human_context)
+    strategies = plan_embeddings(schema, sample_rows_map=sample_rows_map, human_context=human_context)
     save_migration_manifest(strategies, db_url)
 
     # Pretty-print strategy summary
