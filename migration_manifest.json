@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "timestamp": "2026-04-21 22:50:16",
+        "timestamp": "2026-05-25 15:37:33",
         "source_db": "sqlite:///enterprise_system.db",
         "target_engine": "surrealdb",
         "total_tables": 6
@@ -46,6 +46,15 @@
                 {
                     "label": "BELONGS_TO",
                     "from_col": "emp_id",
+                    "to_table": "employees",
+                    "to_col": "id",
+                    "edge_props": [
+                        "allocation_percentage"
+                    ]
+                },
+                {
+                    "label": "BELONGS_TO",
+                    "from_col": "proj_id",
                     "to_table": "projects",
                     "to_col": "id",
                     "edge_props": [
@@ -80,10 +89,11 @@
             ],
             "retained_columns": [
                 "id",
+                "name",
                 "role",
                 "dept_id",
                 "email",
-                "name"
+                "phone"
             ],
             "relations": [
                 {
@@ -97,18 +107,18 @@
                 }
             ],
             "index_cols": [
-                "id",
                 "dept_id"
             ],
             "index_unique": {
-                "id": true,
                 "dept_id": true
             },
             "fallback_used": false,
             "agent_errors": {
                 "vector": [],
                 "graph": [],
-                "document": [],
+                "document": [
+                    "nested_fields['contact']: unknown column 'phone'."
+                ],
                 "index": []
             }
         },
@@ -123,20 +133,17 @@
             ],
             "retained_columns": [
                 "id",
-                "full_content",
-                "author_id",
                 "title",
-                "tags"
+                "author_id",
+                "tags",
+                "full_content"
             ],
             "relations": [
                 {
-                    "label": "BELONGS_TO",
+                    "label": "AUTHORED_BY",
                     "from_col": "author_id",
                     "to_table": "employees",
-                    "to_col": "id",
-                    "edge_props": [
-                        "tags"
-                    ]
+                    "to_col": "id"
                 }
             ],
             "index_cols": [
@@ -202,31 +209,44 @@
             "retained_columns": [
                 "id",
                 "requester_id",
-                "issue_summary",
                 "status",
-                "priority"
+                "priority",
+                "email",
+                "phone"
             ],
             "relations": [
                 {
                     "label": "BELONGS_TO",
                     "from_col": "requester_id",
                     "to_table": "employees",
-                    "to_col": "id"
+                    "to_col": "id",
+                    "edge_props": [
+                        "issue_summary",
+                        "status",
+                        "priority"
+                    ]
                 }
             ],
             "index_cols": [
                 "id",
-                "requester_id"
+                "requester_id",
+                "status",
+                "priority"
             ],
             "index_unique": {
                 "id": true,
-                "requester_id": false
+                "requester_id": false,
+                "status": true,
+                "priority": true
             },
             "fallback_used": false,
             "agent_errors": {
                 "vector": [],
                 "graph": [],
-                "document": [],
+                "document": [
+                    "nested_fields['contact']: unknown column 'email'.",
+                    "nested_fields['contact']: unknown column 'phone'."
+                ],
                 "index": []
             }
         }

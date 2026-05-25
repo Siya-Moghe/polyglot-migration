@@ -73,44 +73,35 @@ def normalize_strategy(
     all_cols = [c["name"] for c in info.get("columns", [])]
 
     def _valid_cols(lst: Any) -> list:
-        if not isinstance(lst, list):
-            return []
+        if not isinstance(lst, list): return []
         return [c for c in lst if isinstance(c, str) and c in all_cols]
 
     top_fields = _valid_cols(strategy.get("top_level_fields", all_cols))
-    if not top_fields:
-        top_fields = all_cols
+    if not top_fields: top_fields = all_cols
 
     nested: dict = {}
-    raw_nested = strategy.get("nested_fields", {})
-    if isinstance(raw_nested, dict):
-        for parent, children in raw_nested.items():
+    if isinstance(strategy.get("nested_fields"), dict):
+        for parent, children in strategy.get("nested_fields").items():
             safe_children = _valid_cols(children)
-            if safe_children:
-                nested[parent] = safe_children
+            if safe_children: nested[parent] = safe_children
 
     relations: list = []
     for rel in strategy.get("relations", []):
-        if not isinstance(rel, dict):
-            continue
-        fc = rel.get("from_col", "")
-        if fc and fc not in all_cols:
-            continue
-        relations.append({
-            "label":      rel.get("label", f"RELATES_TO_{rel.get('to_table','?').upper()}"),
-            "from_col":   fc,
-            "to_table":   rel.get("to_table", ""),
-            "to_col":     rel.get("to_col", "id"),
-            "edge_props": _valid_cols(rel.get("edge_props", [])),
-        })
+        if isinstance(rel, dict) and rel.get("from_col") in all_cols:
+            relations.append({
+                "label":      rel.get("label", f"RELATES_TO_{rel.get('to_table','?').upper()}"),
+                "from_col":   rel["from_col"],
+                "to_table":   rel.get("to_table", ""),
+                "to_col":     rel.get("to_col", "id"),
+                "edge_props": _valid_cols(rel.get("edge_props", [])),
+            })
 
-    vector_cols = _valid_cols(strategy.get("vector_cols", []))
-    use_vector  = bool(strategy.get("use_vector")) and len(vector_cols) > 0
-
+    use_vector = bool(strategy.get("use_vector"))
+    
     return {
         "use_vector":       use_vector,
         "vector_template":  strategy.get("vector_template", "") if use_vector else "",
-        "vector_cols":      vector_cols,
+        "vector_cols":      _valid_cols(strategy.get("vector_cols", [])),
         "use_graph":        bool(strategy.get("use_graph")) and len(relations) > 0,
         "relations":        relations,
         "use_nested":       bool(strategy.get("use_nested")) and len(nested) > 0,
@@ -119,7 +110,6 @@ def normalize_strategy(
         "index_cols":       _valid_cols(strategy.get("index_cols", [])),
         "reasoning":        strategy.get("reasoning", ""),
     }
-
 
 # ---------------------------------------------------------------------------
 # Build a single record dict from a source row
@@ -255,7 +245,8 @@ def export_to_surrealdb(
 
         # Insert graph edges  — insert_relation(label, edge_dict)
         for label, edge in relations_to_emit:
-            db.insert_relation(label, edge)
+            query = f"RELATE {edge['in']}->{label}->{edge['out']};"
+            db.query(query)
 
         if relations_to_emit:
             print(f"  ... created {len(relations_to_emit)} graph edges")
