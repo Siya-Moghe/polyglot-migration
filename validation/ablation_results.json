@@ -1,157 +1,157 @@
 {
   "V1": {
     "total": 40,
-    "correct": 29,
-    "accuracy": 0.725,
-    "macro_f1": 0.722,
-    "fallback_rate": 0.1,
-    "avg_time_s": 12.4,
+    "correct": 31,
+    "accuracy": 0.775,
+    "macro_f1": 0.0,
+    "fallback_rate": 0.0,
+    "avg_time_s": 7.9,
     "per_class": {
-      "chroma": {
-        "precision": 0.556,
-        "recall": 1.0,
-        "f1": 0.714
+      "vector": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "mongo": {
-        "precision": 1.0,
-        "recall": 0.6,
-        "f1": 0.75
+      "document": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "neo4j": {
-        "precision": 0.8,
-        "recall": 0.8,
-        "f1": 0.8
+      "graph": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "relational": {
-        "precision": 0.833,
-        "recall": 0.5,
-        "f1": 0.625
+      "index": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       }
     },
-    "ais": 0.9
+    "ais": 0.875
   },
   "V2": {
     "total": 40,
     "correct": 29,
     "accuracy": 0.725,
-    "macro_f1": 0.72,
-    "fallback_rate": 0.15,
-    "avg_time_s": 11.6,
+    "macro_f1": 0.0,
+    "fallback_rate": 0.0,
+    "avg_time_s": 5.3,
     "per_class": {
-      "chroma": {
-        "precision": 0.588,
-        "recall": 1.0,
-        "f1": 0.741
+      "vector": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "mongo": {
-        "precision": 1.0,
-        "recall": 0.6,
-        "f1": 0.75
+      "document": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "neo4j": {
-        "precision": 0.8,
-        "recall": 0.8,
-        "f1": 0.8
+      "graph": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "relational": {
-        "precision": 0.714,
-        "recall": 0.5,
-        "f1": 0.588
+      "index": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       }
     },
-    "ais": 0.925
+    "ais": 0.975
   },
   "V3": {
     "total": 40,
-    "correct": 30,
-    "accuracy": 0.75,
-    "macro_f1": 0.739,
-    "fallback_rate": 0.075,
-    "avg_time_s": 10.3,
+    "correct": 29,
+    "accuracy": 0.725,
+    "macro_f1": 0.0,
+    "fallback_rate": 0.0,
+    "avg_time_s": 7.7,
     "per_class": {
-      "chroma": {
-        "precision": 0.625,
-        "recall": 1.0,
-        "f1": 0.769
+      "vector": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "mongo": {
-        "precision": 0.857,
-        "recall": 0.6,
-        "f1": 0.706
+      "document": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "neo4j": {
-        "precision": 0.818,
-        "recall": 0.9,
-        "f1": 0.857
+      "graph": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "relational": {
-        "precision": 0.833,
-        "recall": 0.5,
-        "f1": 0.625
+      "index": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       }
     },
-    "ais": 0.9
+    "ais": 0.95
   },
   "V4": {
     "total": 40,
     "correct": 30,
     "accuracy": 0.75,
-    "macro_f1": 0.743,
-    "fallback_rate": 0.1,
-    "avg_time_s": 10.3,
+    "macro_f1": 0.0,
+    "fallback_rate": 0.0,
+    "avg_time_s": 7.7,
     "per_class": {
-      "chroma": {
-        "precision": 0.588,
-        "recall": 1.0,
-        "f1": 0.741
+      "vector": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "mongo": {
-        "precision": 1.0,
-        "recall": 0.6,
-        "f1": 0.75
+      "document": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "neo4j": {
-        "precision": 0.818,
-        "recall": 0.9,
-        "f1": 0.857
+      "graph": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "relational": {
-        "precision": 0.833,
-        "recall": 0.5,
-        "f1": 0.625
+      "index": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       }
     },
-    "ais": 0.925
+    "ais": 0.875
   },
   "V5": {
     "total": 40,
     "correct": 29,
     "accuracy": 0.725,
-    "macro_f1": 0.722,
+    "macro_f1": 0.0,
     "fallback_rate": 0.0,
-    "avg_time_s": 11.2,
+    "avg_time_s": 13.7,
     "per_class": {
-      "chroma": {
-        "precision": 0.556,
-        "recall": 1.0,
-        "f1": 0.714
+      "vector": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "mongo": {
-        "precision": 1.0,
-        "recall": 0.6,
-        "f1": 0.75
+      "document": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "neo4j": {
-        "precision": 0.8,
-        "recall": 0.8,
-        "f1": 0.8
+      "graph": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       },
-      "relational": {
-        "precision": 0.833,
-        "recall": 0.5,
-        "f1": 0.625
+      "index": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
       }
     },
-    "ais": 0.95
+    "ais": 0.975
   }
 }

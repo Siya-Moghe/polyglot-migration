@@ -36,7 +36,7 @@ GROUND_TRUTH_PATH = os.path.join(os.path.dirname(__file__), "ground_truth.json")
 GROUND_TABLES_DIR = os.path.join(os.path.dirname(__file__), "ground_tables")
 ABLATION_OUT_PATH = os.path.join(os.path.dirname(__file__), "ablation_results.json")
 
-LABELS = ["chroma", "mongo", "neo4j", "relational"]
+LABELS = ["vector", "document", "graph", "index"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -65,14 +65,14 @@ database system it should be migrated to.
 {enriched}
 
 Routing Rules:
-1. "chroma"     — tables with LONG TEXT columns (descriptions, notes, semantic search).
-2. "mongo"      — self-contained entity tables with no FK relationships.
-3. "neo4j"      — junction/mapping tables with 2+ FK columns.
-4. "relational" — transactional, numeric-heavy, temporal, audit-style tables.
+1. "vector"     — tables with LONG TEXT columns (descriptions, notes, semantic search).
+2. "document"      — self-contained entity tables with no FK relationships.
+3. "graph"      — junction/mapping tables with 2+ FK columns.
+4. "index" — transactional, numeric-heavy, temporal, audit-style tables.
 
 Return ONLY a JSON object:
 {{
-  "target_db": "chroma or mongo or neo4j or relational",
+  "target_db": "vector or document or graph or index",
   "reasoning": "One clear sentence explaining why."
 }}"""
 
@@ -282,10 +282,10 @@ def run_all_variants(gt_entries: list[dict], selected: str = None) -> dict:
             return original_ask(prompt, json_mode=False)   # force json_mode off
 
         with patch.object(llm_utils_mod, "ask_ollama", ask_no_json):
-            import core.agent_chroma as ac
-            import core.agent_mongo  as am
-            import core.agent_neo4j  as an
-            import core.agent_relational as ar
+            import core.agents.agent_vector as ac
+            import core.agents.agent_document  as am
+            import core.agents.agent_graph  as an
+            import core.agents.agent_index as ar
             with patch.object(ac, "ask_ollama", ask_no_json), \
                  patch.object(am, "ask_ollama", ask_no_json), \
                  patch.object(an, "ask_ollama", ask_no_json), \
@@ -327,12 +327,12 @@ def run_all_variants(gt_entries: list[dict], selected: str = None) -> dict:
                 reason  = parsed.get("reasoning", "N/A")
             except (ValueError, KeyError):
                 raw_lower = raw.lower()
-                target = next((db for db in ["relational","neo4j","mongo","chroma"] if db in raw_lower), "chroma")
+                target = next((db for db in ["index","graph","document","vector"] if db in raw_lower), "vector")
                 reason = raw.replace("\n"," ")[:150]
 
-            valid = {"chroma","mongo","neo4j","relational"}
+            valid = {"vector","document","graph","index"}
             if target not in valid:
-                target = next((db for db in ["relational","neo4j","mongo","chroma"] if db in raw.lower()), "chroma")
+                target = next((db for db in ["index","graph","document","vector"] if db in raw.lower()), "vector")
 
             print(f"  [orchestrator] routed '{table_name}' -> {target.upper()}")
             return {**state, "target_db": target, "routing_reason": reason}
@@ -366,15 +366,15 @@ database system it should be migrated to.
 {bare}
 
 Routing Rules:
-1. "chroma"     — tables with LONG TEXT columns (descriptions, notes, semantic search).
-2. "mongo"      — self-contained entity tables with no FK relationships.
-3. "neo4j"      — junction/mapping tables with 2+ FK columns.
-4. "relational" — transactional, numeric-heavy, temporal, audit-style tables.
+1. "vector"     — tables with LONG TEXT columns (descriptions, notes, semantic search).
+2. "document"      — self-contained entity tables with no FK relationships.
+3. "graph"      — junction/mapping tables with 2+ FK columns.
+4. "index" — transactional, numeric-heavy, temporal, audit-style tables.
 
-Decision priority: if a table has multiple FK columns → prefer neo4j.
-If a table has long text columns → prefer chroma.
-If a table is a self-contained entity with no FKs → prefer mongo.
-Otherwise → relational.
+Decision priority: if a table has multiple FK columns → prefer graph.
+If a table has long text columns → prefer vector.
+If a table is a self-contained entity with no FKs → prefer document.
+Otherwise → index.
 """
             # Inject context so bias testing works on this stripped prompt
             if state.get("human_context"):
@@ -382,20 +382,20 @@ Otherwise → relational.
 
             prompt += """Examples:
 - Table "knowledge_base" with columns title (TEXT), full_content (LONG TEXT), tags (TEXT), author_id (FK)
-  → {"target_db": "chroma", "reasoning": "full_content is a long text column ideal for semantic embedding."}
+  → {"target_db": "vector", "reasoning": "full_content is a long text column ideal for semantic embedding."}
 
 - Table "employee_projects" with columns emp_id (FK->employees), proj_id (FK->projects), allocation_percentage (INT)
-  → {"target_db": "neo4j", "reasoning": "Pure junction table with 2 FK columns."}
+  → {"target_db": "graph", "reasoning": "Pure junction table with 2 FK columns."}
 
 - Table "departments" with columns id (PK), name (TEXT), cost_center (TEXT), location (TEXT), no FKs
-  → {"target_db": "mongo", "reasoning": "Self-contained entity, no FK dependencies."}
+  → {"target_db": "document", "reasoning": "Self-contained entity, no FK dependencies."}
 
 - Table "support_tickets" with columns id (PK), requester_id (FK), issue_summary (TEXT), status (TEXT), priority (TEXT)
-  → {"target_db": "relational", "reasoning": "Transactional record table suited for SQL filtering."}
+  → {"target_db": "index", "reasoning": "Transactional record table suited for SQL filtering."}
 
 Return ONLY a JSON object:
 {
-  "target_db": "chroma or mongo or neo4j or relational",
+  "target_db": "vector or document or graph or index",
   "reasoning": "One clear sentence."
 }"""
 
@@ -407,12 +407,12 @@ Return ONLY a JSON object:
                 reason = parsed.get("reasoning", "N/A")
             except (ValueError, KeyError):
                 raw_lower = raw.lower()
-                target = next((db for db in ["relational","neo4j","mongo","chroma"] if db in raw_lower), "chroma")
+                target = next((db for db in ["index","graph","document","vector"] if db in raw_lower), "vector")
                 reason = raw.replace("\n"," ")[:150]
 
-            valid = {"chroma","mongo","neo4j","relational"}
+            valid = {"vector","document","graph","index"}
             if target not in valid:
-                target = next((db for db in ["relational","neo4j","mongo","chroma"] if db in raw.lower()), "chroma")
+                target = next((db for db in ["index","graph","document","vector"] if db in raw.lower()), "vector")
 
             print(f"  [orchestrator] routed '{table_name}' -> {target.upper()}")
             return {**state, "target_db": target, "routing_reason": reason}
@@ -451,10 +451,10 @@ Return ONLY a JSON object:
                 print(f"\n[ERROR] {e}\n")
                 return "{}"
 
-        import core.agent_chroma as ac
-        import core.agent_mongo  as am
-        import core.agent_neo4j  as an
-        import core.agent_relational as ar
+        import core.agents.agent_vector as ac
+        import core.agents.agent_document  as am
+        import core.agents.agent_graph  as an
+        import core.agents.agent_index as ar
 
         with patch.object(llm_utils_mod, "ask_ollama", ask_phi3), \
              patch.object(ac,  "ask_ollama", ask_phi3), \
