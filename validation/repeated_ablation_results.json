@@ -1,0 +1,1290 @@
+{
+  "n_runs": 5,
+  "n_tables": 40,
+  "variants": [
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5"
+  ],
+  "all_runs": [
+    {
+      "V1": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.743,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.4,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.875
+      },
+      "V2": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.718,
+        "fallback_rate": 0.0,
+        "avg_time_s": 6.8,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 0.857,
+            "recall": 0.6,
+            "f1": 0.706
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.875
+      },
+      "V3": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.72,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.2,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.975
+      },
+      "V4": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.719,
+        "fallback_rate": 0.0,
+        "avg_time_s": 9.4,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.889,
+            "recall": 0.8,
+            "f1": 0.842
+          },
+          "use_nested": {
+            "precision": 0.857,
+            "recall": 0.6,
+            "f1": 0.706
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.95
+      },
+      "V5": {
+        "total": 40,
+        "accuracy": 0.8,
+        "macro_f1": 0.789,
+        "fallback_rate": 0.0,
+        "avg_time_s": 16.9,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.769,
+            "recall": 1.0,
+            "f1": 0.87
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 0.9,
+            "recall": 0.9,
+            "f1": 0.9
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.825
+      }
+    },
+    {
+      "V1": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.716,
+        "fallback_rate": 0.0,
+        "avg_time_s": 7.9,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.625,
+            "recall": 1.0,
+            "f1": 0.769
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 0.857,
+            "recall": 0.6,
+            "f1": 0.706
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.95
+      },
+      "V2": {
+        "total": 40,
+        "accuracy": 0.775,
+        "macro_f1": 0.769,
+        "fallback_rate": 0.0,
+        "avg_time_s": 5.5,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.625,
+            "recall": 1.0,
+            "f1": 0.769
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.7,
+            "f1": 0.824
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.9
+      },
+      "V3": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.719,
+        "fallback_rate": 0.0,
+        "avg_time_s": 7.9,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.889,
+            "recall": 0.8,
+            "f1": 0.842
+          },
+          "use_nested": {
+            "precision": 0.857,
+            "recall": 0.6,
+            "f1": 0.706
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.9
+      },
+      "V4": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.72,
+        "fallback_rate": 0.0,
+        "avg_time_s": 7.6,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.925
+      },
+      "V5": {
+        "total": 40,
+        "accuracy": 0.8,
+        "macro_f1": 0.788,
+        "fallback_rate": 0.0,
+        "avg_time_s": 9.6,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.769,
+            "recall": 1.0,
+            "f1": 0.87
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.775
+      }
+    },
+    {
+      "V1": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.745,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.4,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.625,
+            "recall": 1.0,
+            "f1": 0.769
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.7,
+            "f1": 0.824
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.875
+      },
+      "V2": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.745,
+        "fallback_rate": 0.0,
+        "avg_time_s": 5.6,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.625,
+            "recall": 1.0,
+            "f1": 0.769
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.7,
+            "f1": 0.824
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.95
+      },
+      "V3": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.724,
+        "fallback_rate": 0.0,
+        "avg_time_s": 9.1,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.556,
+            "recall": 1.0,
+            "f1": 0.714
+          },
+          "use_graph": {
+            "precision": 0.889,
+            "recall": 0.8,
+            "f1": 0.842
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.95
+      },
+      "V4": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.743,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.5,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.9
+      },
+      "V5": {
+        "total": 40,
+        "accuracy": 0.825,
+        "macro_f1": 0.819,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.2,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.909,
+            "recall": 1.0,
+            "f1": 0.952
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "index_cols": {
+            "precision": 0.75,
+            "recall": 0.6,
+            "f1": 0.667
+          }
+        },
+        "ais": 0.875
+      }
+    },
+    {
+      "V1": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.724,
+        "fallback_rate": 0.0,
+        "avg_time_s": 7.8,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.556,
+            "recall": 1.0,
+            "f1": 0.714
+          },
+          "use_graph": {
+            "precision": 0.889,
+            "recall": 0.8,
+            "f1": 0.842
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.95
+      },
+      "V2": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.743,
+        "fallback_rate": 0.0,
+        "avg_time_s": 5.7,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.9
+      },
+      "V3": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.722,
+        "fallback_rate": 0.0,
+        "avg_time_s": 6.9,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.556,
+            "recall": 1.0,
+            "f1": 0.714
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.925
+      },
+      "V4": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.743,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.0,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.875
+      },
+      "V5": {
+        "total": 40,
+        "accuracy": 0.825,
+        "macro_f1": 0.813,
+        "fallback_rate": 0.0,
+        "avg_time_s": 10.1,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.769,
+            "recall": 1.0,
+            "f1": 0.87
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 0.9,
+            "recall": 0.9,
+            "f1": 0.9
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.8
+      }
+    },
+    {
+      "V1": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.72,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.1,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.925
+      },
+      "V2": {
+        "total": 40,
+        "accuracy": 0.725,
+        "macro_f1": 0.724,
+        "fallback_rate": 0.0,
+        "avg_time_s": 5.7,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.556,
+            "recall": 1.0,
+            "f1": 0.714
+          },
+          "use_graph": {
+            "precision": 0.889,
+            "recall": 0.8,
+            "f1": 0.842
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.714,
+            "recall": 0.5,
+            "f1": 0.588
+          }
+        },
+        "ais": 0.9
+      },
+      "V3": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.743,
+        "fallback_rate": 0.0,
+        "avg_time_s": 7.8,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.588,
+            "recall": 1.0,
+            "f1": 0.741
+          },
+          "use_graph": {
+            "precision": 0.818,
+            "recall": 0.9,
+            "f1": 0.857
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.95
+      },
+      "V4": {
+        "total": 40,
+        "accuracy": 0.75,
+        "macro_f1": 0.747,
+        "fallback_rate": 0.0,
+        "avg_time_s": 7.8,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.556,
+            "recall": 1.0,
+            "f1": 0.714
+          },
+          "use_graph": {
+            "precision": 0.9,
+            "recall": 0.9,
+            "f1": 0.9
+          },
+          "use_nested": {
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.95
+      },
+      "V5": {
+        "total": 40,
+        "accuracy": 0.775,
+        "macro_f1": 0.764,
+        "fallback_rate": 0.0,
+        "avg_time_s": 8.6,
+        "per_class": {
+          "use_vector": {
+            "precision": 0.769,
+            "recall": 1.0,
+            "f1": 0.87
+          },
+          "use_graph": {
+            "precision": 0.8,
+            "recall": 0.8,
+            "f1": 0.8
+          },
+          "use_nested": {
+            "precision": 0.727,
+            "recall": 0.8,
+            "f1": 0.762
+          },
+          "index_cols": {
+            "precision": 0.833,
+            "recall": 0.5,
+            "f1": 0.625
+          }
+        },
+        "ais": 0.775
+      }
+    }
+  ],
+  "summary": {
+    "V1": {
+      "accuracy": {
+        "mean": 0.735,
+        "std": 0.013693063937629165,
+        "values": [
+          0.75,
+          0.725,
+          0.75,
+          0.725,
+          0.725
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.7295999999999999,
+        "std": 0.013464768843169954,
+        "values": [
+          0.743,
+          0.716,
+          0.745,
+          0.724,
+          0.72
+        ]
+      },
+      "fallback_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "avg_time_s": {
+        "mean": 8.120000000000001,
+        "std": 0.2774887385102323,
+        "values": [
+          8.4,
+          7.9,
+          8.4,
+          7.8,
+          8.1
+        ]
+      },
+      "ais": {
+        "mean": 0.915,
+        "std": 0.037914377220257735,
+        "values": [
+          0.875,
+          0.95,
+          0.875,
+          0.95,
+          0.925
+        ]
+      },
+      "per_class_f1": {
+        "use_vector": {
+          "mean": 0.7468,
+          "std": 0.02306946033178932,
+          "values": [
+            0.741,
+            0.769,
+            0.769,
+            0.714,
+            0.741
+          ]
+        },
+        "use_graph": {
+          "mean": 0.8198000000000001,
+          "std": 0.027626074639731178,
+          "values": [
+            0.857,
+            0.8,
+            0.8,
+            0.842,
+            0.8
+          ]
+        },
+        "use_nested": {
+          "mean": 0.756,
+          "std": 0.04252058325093859,
+          "values": [
+            0.75,
+            0.706,
+            0.824,
+            0.75,
+            0.75
+          ]
+        },
+        "index_cols": {
+          "mean": 0.5953999999999999,
+          "std": 0.01654690303349846,
+          "values": [
+            0.625,
+            0.588,
+            0.588,
+            0.588,
+            0.588
+          ]
+        }
+      }
+    },
+    "V2": {
+      "accuracy": {
+        "mean": 0.745,
+        "std": 0.020916500663351906,
+        "values": [
+          0.725,
+          0.775,
+          0.75,
+          0.75,
+          0.725
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.7398,
+        "std": 0.020092287077383718,
+        "values": [
+          0.718,
+          0.769,
+          0.745,
+          0.743,
+          0.724
+        ]
+      },
+      "fallback_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "avg_time_s": {
+        "mean": 5.86,
+        "std": 0.5319774431308154,
+        "values": [
+          6.8,
+          5.5,
+          5.6,
+          5.7,
+          5.7
+        ]
+      },
+      "ais": {
+        "mean": 0.905,
+        "std": 0.027386127875258286,
+        "values": [
+          0.875,
+          0.9,
+          0.95,
+          0.9,
+          0.9
+        ]
+      },
+      "per_class_f1": {
+        "use_vector": {
+          "mean": 0.7468,
+          "std": 0.02306946033178932,
+          "values": [
+            0.741,
+            0.769,
+            0.769,
+            0.741,
+            0.714
+          ]
+        },
+        "use_graph": {
+          "mean": 0.8311999999999999,
+          "std": 0.02913245612714448,
+          "values": [
+            0.8,
+            0.857,
+            0.8,
+            0.857,
+            0.842
+          ]
+        },
+        "use_nested": {
+          "mean": 0.7708,
+          "std": 0.05178030513621949,
+          "values": [
+            0.706,
+            0.824,
+            0.824,
+            0.75,
+            0.75
+          ]
+        },
+        "index_cols": {
+          "mean": 0.6102000000000001,
+          "std": 0.020265734627691163,
+          "values": [
+            0.625,
+            0.625,
+            0.588,
+            0.625,
+            0.588
+          ]
+        }
+      }
+    },
+    "V3": {
+      "accuracy": {
+        "mean": 0.73,
+        "std": 0.011180339887498959,
+        "values": [
+          0.725,
+          0.725,
+          0.725,
+          0.725,
+          0.75
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.7256,
+        "std": 0.009914635646356359,
+        "values": [
+          0.72,
+          0.719,
+          0.724,
+          0.722,
+          0.743
+        ]
+      },
+      "fallback_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "avg_time_s": {
+        "mean": 7.9799999999999995,
+        "std": 0.7918333157931658,
+        "values": [
+          8.2,
+          7.9,
+          9.1,
+          6.9,
+          7.8
+        ]
+      },
+      "ais": {
+        "mean": 0.9400000000000001,
+        "std": 0.02850438562747842,
+        "values": [
+          0.975,
+          0.9,
+          0.95,
+          0.925,
+          0.95
+        ]
+      },
+      "per_class_f1": {
+        "use_vector": {
+          "mean": 0.7302,
+          "std": 0.014788509052639499,
+          "values": [
+            0.741,
+            0.741,
+            0.714,
+            0.714,
+            0.741
+          ]
+        },
+        "use_graph": {
+          "mean": 0.8282,
+          "std": 0.026461292485439897,
+          "values": [
+            0.8,
+            0.842,
+            0.842,
+            0.8,
+            0.857
+          ]
+        },
+        "use_nested": {
+          "mean": 0.7412,
+          "std": 0.019677398201998167,
+          "values": [
+            0.75,
+            0.706,
+            0.75,
+            0.75,
+            0.75
+          ]
+        },
+        "index_cols": {
+          "mean": 0.6028,
+          "std": 0.020265734627691163,
+          "values": [
+            0.588,
+            0.588,
+            0.588,
+            0.625,
+            0.625
+          ]
+        }
+      }
+    },
+    "V4": {
+      "accuracy": {
+        "mean": 0.74,
+        "std": 0.013693063937629165,
+        "values": [
+          0.725,
+          0.725,
+          0.75,
+          0.75,
+          0.75
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.7343999999999999,
+        "std": 0.013704014010500731,
+        "values": [
+          0.719,
+          0.72,
+          0.743,
+          0.743,
+          0.747
+        ]
+      },
+      "fallback_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "avg_time_s": {
+        "mean": 8.26,
+        "std": 0.7197221686178635,
+        "values": [
+          9.4,
+          7.6,
+          8.5,
+          8.0,
+          7.8
+        ]
+      },
+      "ais": {
+        "mean": 0.9199999999999999,
+        "std": 0.03259601202601322,
+        "values": [
+          0.95,
+          0.925,
+          0.9,
+          0.875,
+          0.95
+        ]
+      },
+      "per_class_f1": {
+        "use_vector": {
+          "mean": 0.7356,
+          "std": 0.012074767078498876,
+          "values": [
+            0.741,
+            0.741,
+            0.741,
+            0.741,
+            0.714
+          ]
+        },
+        "use_graph": {
+          "mean": 0.8512000000000001,
+          "std": 0.03589846793388263,
+          "values": [
+            0.842,
+            0.8,
+            0.857,
+            0.857,
+            0.9
+          ]
+        },
+        "use_nested": {
+          "mean": 0.7412,
+          "std": 0.019677398201998167,
+          "values": [
+            0.706,
+            0.75,
+            0.75,
+            0.75,
+            0.75
+          ]
+        },
+        "index_cols": {
+          "mean": 0.6102000000000001,
+          "std": 0.020265734627691163,
+          "values": [
+            0.588,
+            0.588,
+            0.625,
+            0.625,
+            0.625
+          ]
+        }
+      }
+    },
+    "V5": {
+      "accuracy": {
+        "mean": 0.805,
+        "std": 0.020916500663351854,
+        "values": [
+          0.8,
+          0.8,
+          0.825,
+          0.825,
+          0.775
+        ]
+      },
+      "macro_f1": {
+        "mean": 0.7946,
+        "std": 0.0220522107735256,
+        "values": [
+          0.789,
+          0.788,
+          0.819,
+          0.813,
+          0.764
+        ]
+      },
+      "fallback_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "values": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "avg_time_s": {
+        "mean": 10.68,
+        "std": 3.5590729129929324,
+        "values": [
+          16.9,
+          9.6,
+          8.2,
+          10.1,
+          8.6
+        ]
+      },
+      "ais": {
+        "mean": 0.8099999999999999,
+        "std": 0.04183300132670376,
+        "values": [
+          0.825,
+          0.775,
+          0.875,
+          0.8,
+          0.775
+        ]
+      },
+      "per_class_f1": {
+        "use_vector": {
+          "mean": 0.8864000000000001,
+          "std": 0.03667151483099654,
+          "values": [
+            0.87,
+            0.87,
+            0.952,
+            0.87,
+            0.87
+          ]
+        },
+        "use_graph": {
+          "mean": 0.8114000000000001,
+          "std": 0.025491174943497577,
+          "values": [
+            0.8,
+            0.8,
+            0.8,
+            0.857,
+            0.8
+          ]
+        },
+        "use_nested": {
+          "mean": 0.8552,
+          "std": 0.056362221389863625,
+          "values": [
+            0.9,
+            0.857,
+            0.857,
+            0.9,
+            0.762
+          ]
+        },
+        "index_cols": {
+          "mean": 0.626,
+          "std": 0.027964262908219153,
+          "values": [
+            0.588,
+            0.625,
+            0.667,
+            0.625,
+            0.625
+          ]
+        }
+      }
+    }
+  }
+}
